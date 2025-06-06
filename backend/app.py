@@ -26,5 +26,9 @@ def submit_data():
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/')
+def home():
+    return "Flask app is running"
+
 if __name__ == '__main__':
     app.run()
