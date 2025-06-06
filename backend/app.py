@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 import traceback
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -9,7 +13,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
-console.log(db)
+logging.info(db)
 collection = db.customers
 
 @app.route('/submit', methods=['POST'])
