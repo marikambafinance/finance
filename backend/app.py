@@ -9,6 +9,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
+console.log(db)
 collection = db.customers
 
 @app.route('/submit', methods=['POST'])
