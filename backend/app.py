@@ -2,10 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 import traceback
-import logging
-
-logging.basicConfig(level=logging.INFO)
-
+import datetime
+import random
+import string
+import pytz
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -13,16 +13,77 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
-logging.info(db)
 collection = db.customers
+
+BASE62_ALPHABET = string.digits + string.ascii_uppercase + string.ascii_lowercase
+
+def int_to_base62(num):
+    if num == 0:
+        return BASE62_ALPHABET[0]
+    base62 = []
+    while num:
+        num, rem = divmod(num, 62)
+        base62.append(BASE62_ALPHABET[rem])
+    return ''.join(reversed(base62))
+
+def generate_secure_id(first_name, last_name,random_length=2):
+    # Take first letters uppercase
+    initials = (first_name[0] + last_name[0]).upper()
+    
+    # Get timestamp as YYMMDDHHMM
+    dt_str = datetime.now().strftime("%y%m%d%H%M")
+    dt_num = int(dt_str)
+    
+    # Encode timestamp to base62
+    encoded_dt = int_to_base62(dt_num)
+    
+    # Add random suffix for collision safety
+    suffix = ''.join(random.choices(BASE62_ALPHABET, k=random_length))
+    
+    # Combine all parts
+    return f"{initials}{encoded_dt}{suffix}"
+
+
+def is_duplicate_customer(first_name, last_name, email=None, phone=None):
+    # Build the query to match existing customers with same details
+    query = {
+        "first_name": first_name,
+        "last_name": last_name,
+    }
+    # Optionally add more fields to check for better accuracy
+    if email:
+        query["email"] = email
+    if phone:
+        query["phoneNumber"] = phone
+
+    return collection.find_one(query) is not None
+
+
+def get_ist():
+    ist = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist)
+
+def insert_customer(customer_data):
+    if is_duplicate_customer(
+        customer_data.get("first_name"),
+        customer_data.get("last_name"),
+        customer_data.get("email"),
+        customer_data.get("phoneNumber"),
+    ):
+        return jsonify({"status": "error", "message": "Duplicate customer found! Insert aborted."}), 400
+    else:
+        unique_number = generate_secure_id(customer_data["first_name"],customer_data["last_name"])
+        customer_data["CustomerID"]= unique_number
+        customer_data["InsertedOn"]= get_ist()
+        result = collection.insert_one(customer_data)
+        return result.inserted_id
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
     try:
         data = request.get_json(force=True)
-
-        result = collection.insert_one(data)
-        
+        result = insert_customer(data)
+        #print(result)
 
         return jsonify({"status": "success", "inserted_id": str(result.inserted_id)}), 200
 
@@ -30,10 +91,6 @@ def submit_data():
         
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/')
-def home():
-    return "Flask app is running"
 
 if __name__ == '__main__':
     app.run()
