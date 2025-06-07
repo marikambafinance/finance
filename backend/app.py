@@ -82,7 +82,7 @@ def insert_customer(customer_data):
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        return {"customer":result}
+        return customer_data
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
