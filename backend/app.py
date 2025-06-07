@@ -17,7 +17,7 @@ client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
 
-BASE62_ALPHABET = string.digits + string.ascii_uppercase + string.ascii_lowercase
+BASE62_ALPHABET = string.digits + string.ascii_uppercase
 
 def int_to_base62(num):
     if num == 0:
@@ -87,7 +87,7 @@ def submit_data():
         result = insert_customer(data)
         #print(result)
 
-        return jsonify({"status": "success", "inserted_id": str(result.inserted_id)}), 200
+        return jsonify({"status": "success", "inserted_id": str(result)}), 200
 
     except Exception as e:
         
