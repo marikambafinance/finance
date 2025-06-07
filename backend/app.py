@@ -67,7 +67,8 @@ def is_duplicate_customer(firstName,aadhaarOrPan, lastName=None, email=None, pho
 
 def get_ist():
     ist = pytz.timezone('Asia/Kolkata')
-    return datetime.now(ist)
+    ist_time = datetime.now(ist)
+    return ist_time.strftime("%Y-%m-%d %H:%M:%S %Z%z") 
 
 def insert_customer(customer_data):
     if is_duplicate_customer(
@@ -85,6 +86,10 @@ def insert_customer(customer_data):
         result = collection.insert_one(customer_data)
         customer_data.pop("_id",None)
         return {"insert_id": str(result.inserted_id),"data":customer_data}
+    
+def serialize_doc(doc):
+    doc["_id"] = str(doc["_id"])
+    return doc
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
@@ -101,6 +106,12 @@ def submit_data():
         
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/customers", methods=["GET"])
+def get_all_customers():
+    customers = list(collection.find())
+    serialized_customers = [serialize_doc(doc) for doc in customers]
+    return jsonify({"customers_data":serialized_customers,"status":"success"}),200
     
 @app.route("/")
 def home():
