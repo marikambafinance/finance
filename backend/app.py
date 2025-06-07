@@ -83,9 +83,8 @@ def insert_customer(customer_data):
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        cusdat  = json.loads(customer_data)
-        cusdat.pop("_id",None)
-        return {"insert_id": str(result.inserted_id),"data":cusdat}
+        customer_data.pop("_id",None)
+        return {"insert_id": str(result.inserted_id),"data":customer_data}
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
