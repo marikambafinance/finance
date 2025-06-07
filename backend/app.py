@@ -13,7 +13,6 @@ CORS(app)  # Allows requests from all origins (React frontend)
 
 # MongoDB connection (replace with your actual credentials)
 mongo_uri=os.getenv("MONGO_URI")
-print(mongo_uri)
 client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
