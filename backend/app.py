@@ -47,22 +47,24 @@ def generate_secure_id(firstName, lastName,random_length=3):
     return f"{initials}{encoded_dt}{suffix}"
 
 
-def is_duplicate_customer(firstName,aadhaarOrPan, lastName=None, email=None, phone=None):
+def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
+    reasons = []
     # Build the query to match existing customers with same details
-    query = {
-        "firstName": firstName,
-        "aadhaarOrPan":aadhaarOrPan
-    }
-    # Optionally add more fields to check for better accuracy
-    if lastName:
-        query["lastName"] = lastName
+    if collection.find_one({"aadhaarOrPan": aadhaarOrPan}):
+        reasons.append("aadhaarOrPan already exists")
+    # Optionally add more fields to check for better accuracy 
+    if email and collection.find_one({"email": email}):
+        reasons.append("email already exists")
 
-    if email:
-        query["email"] = email
-    if phone:
-        query["phoneNumber"] = phone
+    if phone and collection.find_one({"phoneNumber": phone}):
+        reasons.append("phoneNumber already exists")
 
-    return collection.find_one(query) is not None
+    if hpNumber and collection.find_one({"hpNumber": hpNumber}):
+        reasons.append("hpNumber already exists")
+
+    if reasons:
+        return True, ", ".join(reasons)
+    return False, None
 
 
 def get_ist():
@@ -71,14 +73,14 @@ def get_ist():
     return ist_time.strftime("%Y-%m-%d %H:%M:%S %Z%z") 
 
 def insert_customer(customer_data):
-    if is_duplicate_customer(
-        customer_data.get("firstName"),
+    is_duplicate, reason = is_duplicate_customer(
+        customer_data.get("hpNumber"),
         customer_data.get("aadhaarOrPan"),
-        customer_data.get("lastName"),
         customer_data.get("email"),
         customer_data.get("phoneNumber"),
-    ):
-        return {"error": "Duplicate customer found!"}
+    )
+    if is_duplicate:
+        return jsonify({"status": "error", "message": f"Duplicate found: {reason}"}), 409
     else:
         unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
         customer_data["CustomerID"]= unique_number
