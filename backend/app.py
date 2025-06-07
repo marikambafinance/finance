@@ -82,18 +82,18 @@ def insert_customer(customer_data):
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        return customer_data
+        return {"insert_id":result.inserted_id,"data":customer_data}
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
     try:
         data = request.get_json(force=True)
-        result = insert_customer(data)
+        res = insert_customer(data)
         #print(result)
-        if "error" in result:
-            return jsonify({"status": "error", "message": result["error"]}), 400
+        if "error" in res:
+            return jsonify({"status": "error", "message": res["error"]}), 400
 
-        return jsonify({"status": "success", "data":result}), 200
+        return jsonify({"status": "success", "response":res}), 200
 
     except Exception as e:
         
