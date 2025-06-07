@@ -28,7 +28,7 @@ def int_to_base62(num):
         base62.append(BASE62_ALPHABET[rem])
     return ''.join(reversed(base62))
 
-def generate_secure_id(firstName, lastName,random_length=2):
+def generate_secure_id(firstName, lastName,random_length=3):
     # Take first letters uppercase
     initials = (firstName[0] + lastName[0]).upper()
     
@@ -46,13 +46,16 @@ def generate_secure_id(firstName, lastName,random_length=2):
     return f"{initials}{encoded_dt}{suffix}"
 
 
-def is_duplicate_customer(firstName, lastName, email=None, phone=None):
+def is_duplicate_customer(firstName,aadhaarOrPan, lastName=None, email=None, phone=None):
     # Build the query to match existing customers with same details
     query = {
         "firstName": firstName,
-        "lastName": lastName,
+        "aadhaarOrPan":aadhaarOrPan
     }
     # Optionally add more fields to check for better accuracy
+    if lastName:
+        query["lastName"] = lastName
+
     if email:
         query["email"] = email
     if phone:
@@ -68,6 +71,7 @@ def get_ist():
 def insert_customer(customer_data):
     if is_duplicate_customer(
         customer_data.get("firstName"),
+        customer_data.get("aadhaarOrPan"),
         customer_data.get("lastName"),
         customer_data.get("email"),
         customer_data.get("phoneNumber"),
@@ -78,7 +82,7 @@ def insert_customer(customer_data):
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        return result.inserted_id
+        return result
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
@@ -86,8 +90,10 @@ def submit_data():
         data = request.get_json(force=True)
         result = insert_customer(data)
         #print(result)
+        if "error" in result:
+            return jsonify({"status": "error", "message": result["error"]}), 400
 
-        return jsonify({"status": "success", "inserted_id": str(result)}), 200
+        return jsonify({"status": "success", "customer": result}), 200
 
     except Exception as e:
         
