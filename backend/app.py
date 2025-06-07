@@ -28,9 +28,9 @@ def int_to_base62(num):
         base62.append(BASE62_ALPHABET[rem])
     return ''.join(reversed(base62))
 
-def generate_secure_id(first_name, last_name,random_length=2):
+def generate_secure_id(firstName, lastName,random_length=2):
     # Take first letters uppercase
-    initials = (first_name[0] + last_name[0]).upper()
+    initials = (firstName[0] + lastName[0]).upper()
     
     # Get timestamp as YYMMDDHHMM
     dt_str = datetime.now().strftime("%y%m%d%H%M")
@@ -46,11 +46,11 @@ def generate_secure_id(first_name, last_name,random_length=2):
     return f"{initials}{encoded_dt}{suffix}"
 
 
-def is_duplicate_customer(first_name, last_name, email=None, phone=None):
+def is_duplicate_customer(firstName, lastName, email=None, phone=None):
     # Build the query to match existing customers with same details
     query = {
-        "first_name": first_name,
-        "last_name": last_name,
+        "firstName": firstName,
+        "lastName": lastName,
     }
     # Optionally add more fields to check for better accuracy
     if email:
@@ -67,14 +67,14 @@ def get_ist():
 
 def insert_customer(customer_data):
     if is_duplicate_customer(
-        customer_data.get("first_name"),
-        customer_data.get("last_name"),
+        customer_data.get("firstName"),
+        customer_data.get("lastName"),
         customer_data.get("email"),
         customer_data.get("phoneNumber"),
     ):
         return jsonify({"status": "error", "message": "Duplicate customer found! Insert aborted."}), 400
     else:
-        unique_number = generate_secure_id(customer_data["first_name"],customer_data["last_name"])
+        unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
