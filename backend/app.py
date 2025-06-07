@@ -6,12 +6,14 @@ import datetime
 import random
 import string
 import pytz
+import os
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
 
 # MongoDB connection (replace with your actual credentials)
-client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+mongo_uri=os.getenv("MONGO_URI")
+client = MongoClient()
 db = client.users
 collection = db.customers
 
