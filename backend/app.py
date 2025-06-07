@@ -7,6 +7,7 @@ import random
 import string
 import pytz
 import os
+import json
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -82,8 +83,9 @@ def insert_customer(customer_data):
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        print(customer_data)
-        return {"insert_id": str(result.inserted_id),"data":customer_data}
+        cusdat  = json.loads(customer_data)
+        cusdat.pop("_id",None)
+        return {"insert_id": str(result.inserted_id),"data":cusdat}
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
