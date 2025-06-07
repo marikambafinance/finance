@@ -1,7 +1,8 @@
-import Home from './components/Home'
+import Home from './pages/Home'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Customer from './pages/Customer'
 import About from './pages/About'
+import CustomerProvider from './context/CustomersContext'
 
 const router = createBrowserRouter([
   {
@@ -20,7 +21,9 @@ const router = createBrowserRouter([
 
 const App = () => {
   return (
-    <RouterProvider router={router}/>
+    <CustomerProvider>
+      <RouterProvider router={router}/>
+    </CustomerProvider>
   )
 }
 

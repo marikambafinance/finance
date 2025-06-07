@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useCreateCustomer } from "../utils/useCreateCustomer";
+import { useCreateCustomer } from "../hooks/useCreateCustomer";
 import Loader from "./Loader";
 
 const AddCustomer = () => {

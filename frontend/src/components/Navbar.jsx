@@ -7,7 +7,7 @@ const Navbar = () => {
     <header className="w-full max-w-6xl flex justify-between items-center py-6 px-4 z-10">
         <Link to="/">
             <div className='flex flex-col justify-center items-center'>
-                <img src={logo} className='w-[150px]' alt="Logo" />
+                <img src={logo} className='w-[120px]' alt="Logo" />
             </div>
         </Link>
         <nav className="space-x-6 text-lg">

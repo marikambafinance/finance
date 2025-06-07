@@ -1,15 +1,33 @@
 import React, { useState } from "react";
+import { useCustomersList } from "../hooks/useCustomersList";
+import { useCustomers } from "../context/CustomersContext";
 
 const Search = () => {
+    const {customers, setCustomers} = useCustomers();
 
     const [search, setSearch] = useState("");
 
+    console.log(customers)
     const handleSearch = ()=>{
-        
+        if(customers){
+            setCustomers(customers.filter((item) => {
+                if(item.CustomerID.includes(search)){
+                    return true;
+                }else if(item.firstName.toLowerCase().includes(search.toLowerCase())){
+                    console.log(item.firstName.toLowerCase())
+                    return true;
+                }else if(item.lastName.toLowerCase().includes(search.toLowerCase())){
+                    return true;
+                }else if(item.phone.includes(search)){
+                    return true;
+                }
+            }))
+        }
+        setSearch("");
     }
 
   return (
-    <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
+    <div className="flex flex-col md:flex-row flex-8/12 items-center gap-4 mb-6">
       <input
         type="text"
         placeholder="Search by name, email, phone or Aadhaar"

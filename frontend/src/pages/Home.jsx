@@ -1,6 +1,6 @@
 import React from "react";
-import Navbar from "./Navbar";
-import Button from "./Button";
+import Navbar from "../components/Navbar";
+import Button from "../components/Button";
 import bgVideo from '/videos/bg.mp4'
 import { buttonList } from "../utils/buttonsConfig";
 

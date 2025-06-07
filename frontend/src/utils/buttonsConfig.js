@@ -1,6 +1,6 @@
 export const buttonList = [
     {
-        title:"Add a customer",
+        title:"Register a customer",
         path: "/customer"
     },
     {
