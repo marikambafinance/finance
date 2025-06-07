@@ -4,6 +4,7 @@ import { tabFormButtons } from "../utils/buttonsConfig";
 import Navbar from "../components/Navbar";
 import AddCustomer from "../components/AddCustomer";
 import CreateLoan from "../components/CreateLoan";
+import CustomerList from "../components/CustomerList";
 
 const Customer = () => {
 
@@ -15,6 +16,7 @@ const Customer = () => {
             {tabFormButtons.map((item,idx) => <TabFormButton key={idx} tabName={item.tabName} activeTab={activeTab} setActiveTab={setActiveTab}/>)}
         </div>
         {activeTab === "Customers" && <AddCustomer />}
+        {activeTab === "Customers List" && <CustomerList />}
         {activeTab === "Loans" && <CreateLoan />}
         
     </div>

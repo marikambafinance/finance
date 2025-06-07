@@ -1,8 +1,9 @@
 import { useForm } from "react-hook-form";
 import { useCreateCustomer } from "../utils/useCreateCustomer";
+import Loader from "./Loader";
 
 const AddCustomer = () => {
-    const createCustomer = useCreateCustomer();
+    const {createCustomer, loading, setLoading} = useCreateCustomer();
     
   const {
     register,
@@ -12,16 +13,20 @@ const AddCustomer = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
+    setLoading(true);
     const res = await createCustomer(data);
+    setLoading(false);
     console.log(res);
     reset();
   };
+
+  if(loading) return <Loader />
 
   return (
     <div className="bg-gradient-to-b w-full max-w-6xl from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
       <main className="w-full max-w-6xl bg-gray-800 rounded-lg shadow-lg p-8 mt-10">
         <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold text-teal-300">Create Customer</h2>
+          <h2 className="text-3xl font-bold text-teal-300">Register a Customer</h2>
         </div>
 
         <form
@@ -29,15 +34,23 @@ const AddCustomer = () => {
           onSubmit={handleSubmit(onSubmit)}
         >
           <div>
-            <label className="block mb-1">Full Name</label>
+            <label className="block mb-1">First Name</label>
             <input
-              {...register("name", { required: "Name is required" })}
+              {...register("firstName", { required: "First Name is required" })}
               type="text"
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
-            {errors.name && (
-              <p className="text-red-400 text-sm">{errors.name.message}</p>
+            {errors.firstName && (
+              <p className="text-red-400 text-sm">{errors.firstName.message}</p>
             )}
+          </div>
+          <div>
+            <label className="block mb-1">Last Name</label>
+            <input
+              {...register("lastName")}
+              type="text"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
           </div>
 
           <div>
@@ -80,12 +93,9 @@ const AddCustomer = () => {
             <label className="block mb-1">Email</label>
             <input
               type="email"
-              {...register("email", { required: "Email is required" })}
+              {...register("email")}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
-            {errors.email && (
-              <p className="text-red-400 text-sm">{errors.email.message}</p>
-            )}
           </div>
 
           <div>
@@ -97,6 +107,18 @@ const AddCustomer = () => {
             />
             {errors.phone && (
               <p className="text-red-400 text-sm">{errors.phone.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1">HP Number</label>
+            <input
+              type="text"
+              {...register("hpNumber", { required: "HP Number is required" })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors.hpNumber && (
+              <p className="text-red-400 text-sm">{errors.hpNumber.message}</p>
             )}
           </div>
 
@@ -113,16 +135,19 @@ const AddCustomer = () => {
             <label className="block mb-1">Zip Code</label>
             <input
               type="text"
-              {...register("zip")}
+              {...register("zip", {required: "Zip code is required"})}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
+            {errors.zip && (
+              <p className="text-red-400 text-sm">{errors.zip.message}</p>
+            )}
           </div>
 
           <div>
             <label className="block mb-1">Aadhaar / PAN</label>
             <input
               type="text"
-              {...register("aadhaar_pan", {required: "Aadhaar/PAN is required"})}
+              {...register("aadhaarOrPan", {required: "Aadhaar/PAN is required"})}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
             {errors.aadhaar_pan && (
@@ -157,7 +182,7 @@ const AddCustomer = () => {
             <label className="block mb-1">Annual Income</label>
             <input
               type="number"
-              {...register("income")}
+              {...register("annualIncome")}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
           </div>

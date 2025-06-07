@@ -26,8 +26,8 @@ const Home = () => {
           database. Simple, secure, and elegant.
         </p>
         <div className="flex flex-wrap gap-2">
-          {buttonList.map((item) => (
-            <Button title={item.title} path={item.path} />
+          {buttonList.map((item, idx) => (
+            <Button key={idx} title={item.title} path={item.path} />
           ))}
         </div>
       </main>

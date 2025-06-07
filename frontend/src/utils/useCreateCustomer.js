@@ -1,5 +1,8 @@
+import { useState } from "react";
 
 export const useCreateCustomer = ()=>{
+    const [loading, setLoading] = useState(false);
+
     const createCustomer = async (formData)=>{
         try {
             const res = await fetch('https://mariamma-finance.onrender.com/submit',{
@@ -11,11 +14,13 @@ export const useCreateCustomer = ()=>{
             })
 
             const data = await res.json();
-            console.log("Server response : ",data)
+            setLoading(false)
+            return data;
         } catch (error) {
+            setLoading(false)
             console.log("Error submitting the form : ",error)
         }  
     }
     
-    return createCustomer;
+    return {createCustomer, loading, setLoading};
 }

@@ -12,6 +12,7 @@ export const buttonList = [
 
 export const tabFormButtons = [
     {tabName: "Customers"},
+    {tabName: "Customers List"},
     {tabName: "Loans"},
     {tabName: "Repayments"}
 ]
