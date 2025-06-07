@@ -24,7 +24,7 @@ def int_to_base62(num):
         return BASE62_ALPHABET[0]
     base62 = []
     while num:
-        num, rem = divmod(num, 62)
+        num, rem = divmod(num, 36)
         base62.append(BASE62_ALPHABET[rem])
     return ''.join(reversed(base62))
 
