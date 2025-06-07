@@ -7,7 +7,6 @@ import random
 import string
 import pytz
 import os
-import json
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -47,73 +46,59 @@ def generate_secure_id(firstName, lastName,random_length=3):
     return f"{initials}{encoded_dt}{suffix}"
 
 
-def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
-    reasons = []
+def is_duplicate_customer(firstName,aadhaarOrPan, lastName=None, email=None, phone=None):
     # Build the query to match existing customers with same details
-    if collection.find_one({"aadhaarOrPan": aadhaarOrPan}):
-        reasons.append("aadhaarOrPan already exists")
-    # Optionally add more fields to check for better accuracy 
-    if email and collection.find_one({"email": email}):
-        reasons.append("email already exists")
+    query = {
+        "firstName": firstName,
+        "aadhaarOrPan":aadhaarOrPan
+    }
+    # Optionally add more fields to check for better accuracy
+    if lastName:
+        query["lastName"] = lastName
 
-    if phone and collection.find_one({"phoneNumber": phone}):
-        reasons.append("phoneNumber already exists")
+    if email:
+        query["email"] = email
+    if phone:
+        query["phoneNumber"] = phone
 
-    if hpNumber and collection.find_one({"hpNumber": hpNumber}):
-        reasons.append("hpNumber already exists")
-
-    if reasons:
-        return True, ", ".join(reasons)
-    return False, None
+    return collection.find_one(query) is not None
 
 
 def get_ist():
     ist = pytz.timezone('Asia/Kolkata')
-    ist_time = datetime.now(ist)
-    return ist_time.strftime("%Y-%m-%d %H:%M:%S %Z%z") 
+    return datetime.now(ist)
 
 def insert_customer(customer_data):
-    is_duplicate, reason = is_duplicate_customer(
-        customer_data.get("hpNumber"),
+    if is_duplicate_customer(
+        customer_data.get("firstName"),
         customer_data.get("aadhaarOrPan"),
+        customer_data.get("lastName"),
         customer_data.get("email"),
         customer_data.get("phoneNumber"),
-    )
-    if is_duplicate:
-        return jsonify({"status": "error", "message": f"Duplicate found: {reason}"}), 409
+    ):
+        return jsonify({"status": "error", "message": "Duplicate customer found! Insert aborted."}), 400
     else:
         unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        customer_data.pop("_id",None)
-        return {"insert_id": str(result.inserted_id),"data":customer_data}
-    
-def serialize_doc(doc):
-    doc["_id"] = str(doc["_id"])
-    return doc
+        return result
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
     try:
         data = request.get_json(force=True)
-        res = insert_customer(data)
+        result = insert_customer(data)
         #print(result)
-        if "error" in res:
-            return jsonify({"status": "error", "message": res["error"]}), 400
+        if "error" in result:
+            return jsonify({"status": "error", "message": result["error"]}), 400
 
-        return jsonify({"status": "success", "response":res["data"]}), 200
+        return jsonify({"status": "success", "customer": result}), 200
 
     except Exception as e:
         
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route("/customers", methods=["GET"])
-def get_all_customers():
-    customers = list(collection.find())
-    serialized_customers = [serialize_doc(doc) for doc in customers]
-    return jsonify({"customers_data":serialized_customers,"status":"success"}),200
     
 @app.route("/")
 def home():
