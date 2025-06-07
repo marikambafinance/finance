@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 import traceback
-import datetime
+from  datetime import datetime
 import random
 import string
 import pytz
