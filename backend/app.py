@@ -76,13 +76,13 @@ def insert_customer(customer_data):
         customer_data.get("email"),
         customer_data.get("phoneNumber"),
     ):
-        return jsonify({"status": "error", "message": "Duplicate customer found! Insert aborted."}), 400
+        return {"error": "Duplicate customer found!"}
     else:
         unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
         customer_data["CustomerID"]= unique_number
         customer_data["InsertedOn"]= get_ist()
         result = collection.insert_one(customer_data)
-        return result
+        return {"customer":result}
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
@@ -93,7 +93,7 @@ def submit_data():
         if "error" in result:
             return jsonify({"status": "error", "message": result["error"]}), 400
 
-        return jsonify({"status": "success", "customer": result}), 200
+        return jsonify({"status": "success", "data":result}), 200
 
     except Exception as e:
         
