@@ -66,25 +66,13 @@ def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
         return True, ", ".join(reasons)
     return False, None
 
-def initialize_loan_id_counter():
-    result = db.counters.update_one(
-        {"_id": "loanId"},
-        {"$setOnInsert": {"seq": 10000000000}},  # start from 11-digit number
-        upsert=True
-    )
-    if result.upserted_id:
-        print(f"Counter initialized with ID: {result.upserted_id}")
-    else:
-        print("Counter already exists.")
 
 def generate_loan_id():
-    initialize_loan_id_counter()
-    counter = db.counters.find_one_and_update(
-        {"_id": "loanId"},
-        {"$inc": {"seq": 1}},
-        return_document=ReturnDocument.AFTER
-    )
-    return str(counter["seq"])
+    loans =db.loans
+    while True:
+        loan_id = str(random.randint(10**10, 10**11 - 1))  # 11-digit number
+        if not loans.find_one({"loan_id": loan_id}):
+            return loan_id
 
 
 def get_ist():
