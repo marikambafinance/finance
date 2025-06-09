@@ -114,7 +114,7 @@ def insert_loan_data(loan_data):
     loan_data["loanId"] = generate_loan_id()
     result = collection.insert_one(loan_data)
     loan_data.pop("_id",None)
-    return {"insert_id": str(result.inserted_id),"data":loan_data}
+    return {"data":loan_data}
 
 
 def serialize_doc(doc):
@@ -174,7 +174,7 @@ def get_customer_loans():
                 "from": "loans",
                 "localField": "CustomerID",
                 "foreignField": "CustomerID",  # or "_id" if customer ID is MongoDB ObjectId
-                "as": "customerInfo"
+                "as": "loanInfo"
             }
         },{
         "$addFields": {
