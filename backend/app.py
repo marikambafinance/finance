@@ -103,7 +103,7 @@ def insert_customer(customer_data):
 
 def insert_loan_data(loan_data):
     loan_data["loanId"] = generate_loan_id()
-    result = collection.insert_one(loan_data)
+    result = db.loans.insert_one(loan_data)
     loan_data.pop("_id",None)
     return {"data":loan_data}
 
