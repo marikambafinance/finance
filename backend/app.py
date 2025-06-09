@@ -2,13 +2,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient,ReturnDocument
 import traceback
-from  datetime import datetime
+from  datetime import datetime ,timedelta
 import random
 import string
 import pytz
 import os
 import json
 from bson import ObjectId
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -77,12 +78,31 @@ def generate_loan_id(customer_id):
         if not loans.find_one({"loanId":loan_id}):
             return loan_id
         
+def create_repayment_schedule(loan_id, customer_id, months,emi):
+    start_date = datetime.now(ZoneInfo("Asia/Kolkata"))
+    repayment_entries = []
+    try:
+        for i in range(months):
+            due_date = start_date + timedelta(days=30 * (i + 1))  # Approx 1 month intervals
+            entry = {
+                "loanId": loan_id,
+                "CustomerID": customer_id,
+                "installmentNumber": i + 1,
+                "dueDate": due_date,
+                "amountDue": emi,
+                "amountPaid": 0,
+                "status": "pending",
+                "paymentDate": None,
+                "paymentId":None
+            }
+            repayment_entries.append(entry)
+
+        db.repayments.insert_many(repayment_entries)
+    except Exception as e:
+        return {"status":"error","message":str(e)}
 
 
-def get_ist():
-    ist = pytz.timezone('Asia/Kolkata')
-    ist_time = datetime.now(ist)
-    return ist_time.strftime("%Y-%m-%d %H:%M:%S %Z%z") 
+
 
 def insert_customer(customer_data):
     is_duplicate, reason = is_duplicate_customer(
@@ -96,7 +116,7 @@ def insert_customer(customer_data):
     else:
         unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
         customer_data["CustomerID"]= unique_number
-        customer_data["InsertedOn"]= get_ist()
+        customer_data["InsertedOn"]= datetime.now(ZoneInfo("Asia/Kolkata"))
         result = collection.insert_one(customer_data)
         customer_data.pop("_id",None)
         return {"insert_id": str(result.inserted_id),"data":customer_data}
@@ -144,11 +164,12 @@ def submit_loan():
     try:
         data = request.get_json(force=True)
         res = insert_loan_data(data)
+        create_repayment_schedule(res["loanId"], res["CustomerID"], res["loanTerm"],res["monthlyEMI"])
         #print(result)
         if "error" in res:
             return jsonify({"status": "error", "message": res["error"]}), 400
 
-        return jsonify({"status": "success", "response":res["data"]}), 200
+        return jsonify({"status": "success", "response":res["data"],"addInfo":"Repayment DB updated"}), 200
 
     except Exception as e:
         
