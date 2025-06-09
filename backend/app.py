@@ -164,6 +164,8 @@ def submit_loan():
     try:
         data = request.get_json(force=True)
         res = insert_loan_data(data)
+        res = res.get("data")
+        print(res)
         create_repayment_schedule(res["loanId"], res["CustomerID"], res["loanTerm"],res["monthlyEMI"])
         #print(result)
         if "error" in res:
