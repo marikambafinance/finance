@@ -102,7 +102,7 @@ def insert_customer(customer_data):
 
 
 def insert_loan_data(loan_data):
-    if loan_data.get("CustomerId"):
+    if "CustomerId" in loan_data:
         loan_data["loanId"] = generate_loan_id(loan_data.get("CustomerId"))
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
@@ -156,11 +156,11 @@ def submit_loan():
 @app.route('/get_customer_loan_info', methods=['POST'])
 def get_customer_loans():
     data = request.get_json(force=True)
-    customer_id = data.get("CustomerID")
+    
 
-    if not customer_id:
+    if not "CustomerID" in data:
         return jsonify({"error": "customer_id is required"}), 400
-
+    customer_id = data.get("CustomerID")
     pipeline = [
         { "$match": { "CustomerID": customer_id } },
         {
