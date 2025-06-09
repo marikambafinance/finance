@@ -181,7 +181,7 @@ def get_customer_loans():
             "_id": { "$toString": "$_id" },
             "loans": {
                 "$map": {
-                    "input": "$loans",
+                    "input": "$loanInfo",
                     "as": "loan",
                     "in": {
                         "$mergeObjects": [
