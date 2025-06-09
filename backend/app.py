@@ -102,7 +102,8 @@ def insert_customer(customer_data):
 
 
 def insert_loan_data(loan_data):
-    if "CustomerId" in loan_data:
+    print(loan_data)
+    if "CustomerId" in loan_data.keys():
         loan_data["loanId"] = generate_loan_id(loan_data.get("CustomerId"))
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
@@ -158,7 +159,7 @@ def get_customer_loans():
     data = request.get_json(force=True)
     
 
-    if not "CustomerID" in data:
+    if not "CustomerID" in data.keys():
         return jsonify({"error": "customer_id is required"}), 400
     customer_id = data.get("CustomerID")
     pipeline = [
