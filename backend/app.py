@@ -103,13 +103,13 @@ def insert_customer(customer_data):
 
 def insert_loan_data(loan_data):
     print(loan_data)
-    if "CustomerId" in loan_data.keys():
-        loan_data["loanId"] = generate_loan_id(loan_data.get("CustomerId"))
+    if "CustomerID" in loan_data.keys():
+        loan_data["loanId"] = generate_loan_id(loan_data.get("CustomerID"))
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
         return {"data":loan_data}
     else:
-        return {"error":"CustomerId was not sent"}
+        return {"error":"CustomerID was not sent"}
 
 
 def serialize_doc(doc):
