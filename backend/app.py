@@ -67,12 +67,15 @@ def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
     return False, None
 
 
-def generate_loan_id():
+def generate_loan_id(customer_id):
     loans =db.loans
     while True:
-        loan_id = str(random.randint(10**10, 10**11 - 1))  # 11-digit number
-        if not loans.find_one({"loan_id": loan_id}):
+        rand_int1 = str(random.randint(10**3, 10**4 - 1))
+        rand_int2 = str(random.randint(10**2, 10**3 - 1))
+        loan_id = f"LN{rand_int1}{customer_id[:3]}{rand_int2}"
+        if not loans.find_one({"loanId":loan_id}):
             return loan_id
+        
 
 
 def get_ist():
