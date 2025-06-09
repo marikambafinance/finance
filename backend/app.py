@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pymongo import MongoClient
+from pymongo import MongoClient,ReturnDocument
 import traceback
 from  datetime import datetime
 import random
@@ -66,6 +66,26 @@ def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
         return True, ", ".join(reasons)
     return False, None
 
+def initialize_loan_id_counter():
+    result = db.counters.update_one(
+        {"_id": "loanId"},
+        {"$setOnInsert": {"seq": 10000000000}},  # start from 11-digit number
+        upsert=True
+    )
+    if result.upserted_id:
+        print(f"Counter initialized with ID: {result.upserted_id}")
+    else:
+        print("Counter already exists.")
+
+def generate_loan_id():
+    initialize_loan_id_counter()
+    counter = db.counters.find_one_and_update(
+        {"_id": "loanId"},
+        {"$inc": {"seq": 1}},
+        return_document=ReturnDocument.AFTER
+    )
+    return str(counter["seq"])
+
 
 def get_ist():
     ist = pytz.timezone('Asia/Kolkata')
@@ -88,7 +108,15 @@ def insert_customer(customer_data):
         result = collection.insert_one(customer_data)
         customer_data.pop("_id",None)
         return {"insert_id": str(result.inserted_id),"data":customer_data}
-    
+
+
+def insert_loan_data(loan_data):
+    loan_data["loanId"] = generate_loan_id()
+    result = collection.insert_one(loan_data)
+    loan_data.pop("_id",None)
+    return {"insert_id": str(result.inserted_id),"data":loan_data}
+
+
 def serialize_doc(doc):
     doc["_id"] = str(doc["_id"])
     return doc
@@ -114,6 +142,61 @@ def get_all_customers():
     customers = list(collection.find())
     serialized_customers = [serialize_doc(doc) for doc in customers]
     return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+
+@app.route("/loan", methods=["POST"])
+def submit_loan():
+    try:
+        data = request.get_json(force=True)
+        res = insert_loan_data(data)
+        #print(result)
+        if "error" in res:
+            return jsonify({"status": "error", "message": res["error"]}), 400
+
+        return jsonify({"status": "success", "response":res["data"]}), 200
+
+    except Exception as e:
+        
+        traceback.print_exc()  # prints full error traceback to logs
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/get_customer_loan_info', methods=['POST'])
+def get_customer_loans():
+    data = request.get_json(force=True)
+    customer_id = data.get("CustomerID")
+
+    if not customer_id:
+        return jsonify({"error": "customer_id is required"}), 400
+
+    pipeline = [
+        { "$match": { "CustomerID": customer_id } },
+        {
+            "$lookup": {
+                "from": "loans",
+                "localField": "CustomerID",
+                "foreignField": "CustomerID",  # or "_id" if customer ID is MongoDB ObjectId
+                "as": "customerInfo"
+            }
+        },{
+        "$addFields": {
+            "_id": { "$toString": "$_id" },
+            "loans": {
+                "$map": {
+                    "input": "$loans",
+                    "as": "loan",
+                    "in": {
+                        "$mergeObjects": [
+                            "$$loan",
+                            { "_id": { "$toString": "$$loan._id" } }
+                        ]
+                    }
+                }
+            }
+        }
+    }  # flatten the array
+    ]
+
+    result = list(db.customers.aggregate(pipeline))
+    return jsonify({"status":"Success","response":result})
     
 @app.route("/")
 def home():
