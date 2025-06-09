@@ -8,6 +8,7 @@ import string
 import pytz
 import os
 import json
+from bson import ObjectId
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -171,27 +172,21 @@ def get_customer_loans():
                 "foreignField": "CustomerID",  # or "_id" if customer ID is MongoDB ObjectId
                 "as": "loanInfo"
             }
-        },{
-        "$addFields": {
-            "_id": { "$toString": "$_id" },
-            "loans": {
-                "$map": {
-                    "input": "$loanInfo",
-                    "as": "loan",
-                    "in": {
-                        "$mergeObjects": [
-                            "$$loan",
-                            { "_id": { "$toString": "$$loan._id" } }
-                        ]
-                    }
-                }
-            }
-        }
-    }  # flatten the array
+        },
     ]
+    def convert_objectids(doc):
+        if isinstance(doc, list):
+            return [convert_objectids(d) for d in doc]
+        elif isinstance(doc, dict):
+            return {k: convert_objectids(v) for k, v in doc.items()}
+        elif isinstance(doc, ObjectId):
+            return str(doc)
+        return doc
+
+
 
     result = list(db.customers.aggregate(pipeline))
-    return jsonify({"status":"Success","response":result})
+    return jsonify({"status":"Success","response":convert_objectids(result)})
     
 @app.route("/")
 def home():
