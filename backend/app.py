@@ -10,15 +10,16 @@ import os
 import json
 from bson import ObjectId
 from zoneinfo import ZoneInfo
-import pywhatkit as kit
+from twilio.rest import Client
 import time
 import pymongo
 
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
-
+  # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
+
 mongo_uri=os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
 db = client.users
@@ -228,55 +229,6 @@ def get_customer_loans():
     result = list(db.customers.aggregate(pipeline))
     return jsonify({"status":"Success","response":convert_objectids(result)})
     
-@app.route("/remainder_whatsapp", methods=['GET'])
-def remainder():
-    remainder = db.repayments
-    now_ist = datetime.now()
-    three_days_later = now_ist + timedelta(days=3)
-
-    # Query repayments due in next 3 days and not paid
-    repayments = remainder.find({
-        "status": {"$ne": "paid"},
-        "$or": [
-        {"dueDate": {"$gte": now_ist, "$lte": three_days_later}},
-        {"dueDate": {"$lt": now_ist}}
-    ]
-    })
-    for repayment in repayments:
-        customer_id = repayment.get("CustomerID")
-        if not customer_id:
-            continue
-        user = collection.find_one({"CustomerID": customer_id})
-        if not user:
-            continue
-        name = user.get("firstName") + " " + user.get("lastName")
-        phone = "+91"+str(user.get("phone"))  # Must be in +91XXXXXXXXXX format
-        if not phone:
-            continue
-        amount = repayment.get("totalAmountDue", 0)
-        due_date = repayment.get("dueDate")+timedelta(hours=5,minutes=30)
-        due_date_str = due_date.strftime("%d-%b-%Y")
-        message = (
-            f"Hi {name},\n\n"
-            f"This is a reminder that your loan repayment of ₹{amount} is due on {due_date_str}.\n"
-            "Please pay before the due date to avoid penalties.\n\nThank you!"
-        )
-        try:
-            # Schedule message 2 minutes from now (local time)
-            now_local = datetime.now(ZoneInfo("Asia/Kolkata"))
-            send_hour = now_local.hour
-            send_minute = now_local.minute + 2
-
-            if send_minute >= 60:
-                send_minute -= 60
-                send_hour = (send_hour + 1) % 24
-
-            print(f"Scheduling message to {phone} at {send_hour}:{send_minute}")
-            kit.sendwhatmsg(phone, message, send_hour, send_minute)
-            time.sleep(2)  # wait to avoid too many rapid opens
-        except Exception as e:
-            return jsonify({f"Error sending message to {phone}": f"{e}"}),400
-    return jsonify({"status": "success","message":"Remainder messagges sent"}),200
 
 
 @app.route("/update_penalty", methods=['GET'])
