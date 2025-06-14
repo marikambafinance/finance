@@ -103,8 +103,8 @@ def create_repayment_schedule(loan_id, customer_id, months,emi):
                 "totalAmountDue":emi,
                 "updatedOn":None
                         }
-            db.repayments.insert_one(entry)
-        
+            result = db.repayments.insert_one(entry)
+            print(result)
     except Exception as e:
         return {"status":"error","message":str(e)}
     
