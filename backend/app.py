@@ -222,9 +222,20 @@ def get_customer_loans():
     return jsonify({"status":"Success","response":convert_objectids(result)})
     
 
+@app.route('/get_customer_repayment_info', methods=['POST'])
+def get_repayment_info():
+    data = request.get_json(force=True)
+    
 
-  
-
+    if not "hpNumber" in data.keys():
+        return jsonify({"error": "customer_id is required"}), 400
+    customer_id = data.get("hpNumber")
+    try:
+        results = db.repayments.find({"hpNumber": customer_id})
+        serialized_repayments = [serialize_doc(doc) for doc in results]
+        return jsonify({"repayment_data":serialized_repayments,"status":"success"}),200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 @app.route("/")
 def home():
     return jsonify({"message": "API is running"})
