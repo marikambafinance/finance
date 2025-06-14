@@ -11,10 +11,10 @@ import json
 from bson import ObjectId
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
-from dotenv import load_dotenv
+#rom dotenv import load_dotenv
 import time
 import pymongo
-load_dotenv()
+#load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -22,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
 
