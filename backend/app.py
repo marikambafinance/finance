@@ -85,7 +85,6 @@ def generate_loan_id(customer_id):
         
 def create_repayment_schedule(loan_id, customer_id, months,emi):
     start_date = datetime.now(ZoneInfo("Asia/Kolkata"))
-    repayment_entries = []
     try:
         for i in range(months):
             due_date = start_date + timedelta(days=30 * (i + 1))  # Approx 1 month intervals
@@ -104,9 +103,8 @@ def create_repayment_schedule(loan_id, customer_id, months,emi):
                 "totalAmountDue":emi,
                 "updatedOn":None
                         }
-            repayment_entries.append(entry)
-
-        db.repayments.insert_many(repayment_entries)
+            db.repayments.insert_one(entry)
+        
     except Exception as e:
         return {"status":"error","message":str(e)}
     
