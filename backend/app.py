@@ -11,9 +11,10 @@ import json
 from bson import ObjectId
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
+from dotenv import load_dotenv
 import time
 import pymongo
-
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -21,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 
@@ -86,8 +87,9 @@ def generate_loan_id(customer_id):
 def create_repayment_schedule(loan_id, customer_id, months,emi):
     start_date = datetime.now(ZoneInfo("Asia/Kolkata"))
     try:
-        for i in range(months):
+        for i in range(int(months)):
             due_date = start_date + timedelta(days=30 * (i + 1))  # Approx 1 month intervals
+            print(i)
             entry = {
                 "loanId": loan_id,
                 "hpNumber": customer_id,
@@ -225,11 +227,11 @@ def get_repayment_info():
     data = request.get_json(force=True)
     
 
-    if not "hpNumber" in data.keys():
-        return jsonify({"error": "customer_id is required"}), 400
-    customer_id = data.get("hpNumber")
+    if not "loanId" in data.keys():
+        return jsonify({"error": "loan_id is required"}), 400
+    loan_id = data.get("loanId")
     try:
-        results = db.repayments.find({"hpNumber": customer_id})
+        results = db.repayments.find({"loanId": loan_id})
         serialized_repayments = [serialize_doc(doc) for doc in results]
         return jsonify({"repayment_data":serialized_repayments,"status":"success"}),200
     except Exception as e:
