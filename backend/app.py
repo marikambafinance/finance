@@ -11,7 +11,6 @@ import json
 from bson import ObjectId
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
-from dotenv import load_dotenv
 import time
 import pymongo
 
