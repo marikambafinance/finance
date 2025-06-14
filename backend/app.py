@@ -91,7 +91,7 @@ def create_repayment_schedule(loan_id, customer_id, months,emi):
             due_date = start_date + timedelta(days=30 * (i + 1))  # Approx 1 month intervals
             entry = {
                 "loanId": loan_id,
-                "CustomerID": customer_id,
+                "hpNumber": customer_id,
                 "installmentNumber": i + 1,
                 "dueDate": due_date,
                 "amountDue": emi,
@@ -123,7 +123,7 @@ def insert_customer(customer_data):
         return jsonify({"status": "error", "message": f"Duplicate found: {reason}"}), 409
     else:
         unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
-        customer_data["CustomerID"]= unique_number
+        customer_data["hpNumber"]= unique_number
         customer_data["InsertedOn"]= datetime.now(ZoneInfo("Asia/Kolkata"))
         result = collection.insert_one(customer_data)
         customer_data.pop("_id",None)
@@ -132,28 +132,20 @@ def insert_customer(customer_data):
 
 def insert_loan_data(loan_data):
     #print(loan_data)
-    if "CustomerID" in loan_data.keys():
-        loan_data["loanId"] = generate_loan_id(loan_data.get("CustomerID"))
+    if "hpNumber" in loan_data.keys():
+        loan_data["loanId"] = generate_loan_id(loan_data.get("hpNumber"))
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
         return {"data":loan_data}
     else:
-        return {"error":"CustomerID was not sent"}
+        return {"error":"hpNumber was not sent"}
 
 
 def serialize_doc(doc):
     doc["_id"] = str(doc["_id"])
     return doc
 
-def calculate_months_overdue(due_date, current_date,GRACE_PERIOD_DAYS):
-    if current_date < due_date + timedelta(days=GRACE_PERIOD_DAYS):
-        return 0
-    diff_years = current_date.year - due_date.year
-    diff_months = current_date.month - due_date.month
-    total_months = (diff_years * 12) + diff_months
-    if current_date.day < due_date.day:
-        total_months -= 1
-    return max(0, total_months)
+
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
@@ -188,7 +180,7 @@ def submit_loan():
             return jsonify({"status": "error", "message": res["error"]}), 400
         res = res.get("data")
         #print(res)
-        create_repayment_schedule(res["loanId"], res["CustomerID"], res["loanTerm"],res["monthlyEMI"])
+        create_repayment_schedule(res["loanId"], res["hpNumber"], res["loanTerm"],res["monthlyEMI"])
         return jsonify({"status": "success", "response":res,"addInfo":"Repayment DB updated"}), 200
 
     except Exception as e:
@@ -201,16 +193,16 @@ def get_customer_loans():
     data = request.get_json(force=True)
     
 
-    if not "CustomerID" in data.keys():
+    if not "hpNumber" in data.keys():
         return jsonify({"error": "customer_id is required"}), 400
-    customer_id = data.get("CustomerID")
+    customer_id = data.get("hpNumber")
     pipeline = [
-        { "$match": { "CustomerID": customer_id } },
+        { "$match": { "hpNumber": customer_id } },
         {
             "$lookup": {
                 "from": "loans",
-                "localField": "CustomerID",
-                "foreignField": "CustomerID",  # or "_id" if customer ID is MongoDB ObjectId
+                "localField": "hpNumber",
+                "foreignField": "hpNumber",  # or "_id" if customer ID is MongoDB ObjectId
                 "as": "loanInfo"
             }
         },
@@ -231,67 +223,7 @@ def get_customer_loans():
     
 
 
-@app.route("/update_penalty", methods=['GET'])
-def apply_monthly_penalties():
-    PENALTY_PER_MONTH = 300
-    GRACE_PERIOD_DAYS = 5
-    try:
-        remainder_collection = db.repayments
-        now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
-        overdue_repayments = remainder_collection.find({
-            "status": {"$ne": "paid"},
-            "dueDate": {"$lt": now_ist} # Initial filter: due date is in the past
-        })
-        bulk_updates = []
-        for repayment in overdue_repayments:
-            repayment_id = repayment['_id']
-            due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
-            emi = repayment["amountDue"]
-
-            due_date = due_date.astimezone(ZoneInfo("Asia/Kolkata"))
-            grace_period_end_date = due_date + timedelta(days=GRACE_PERIOD_DAYS)
-            if now_ist < grace_period_end_date:
-                continue
-            last_penalty_applied_months = repayment.get('lastPenaltyAppliedMonths', 0)
-            current_total_penalty_applied = repayment.get('penalty', 0)
-            months_overdue_actual = calculate_months_overdue(due_date, now_ist,GRACE_PERIOD_DAYS)
-            penalty_this_run  = 0
-            if months_overdue_actual > last_penalty_applied_months:
-                new_months_to_penalize = months_overdue_actual - last_penalty_applied_months
-                penalty_this_run = new_months_to_penalize * PENALTY_PER_MONTH
-                updated_total_penalty_applied = current_total_penalty_applied + penalty_this_run
-
-                bulk_updates.append(
-                    {
-                        "filter": {"_id": repayment_id},
-                        "update": {"$inc": {
-                                "totalAmountDue": penalty_this_run # Increment existing totalEmi (which now includes base + penalties)
-                            },
-                            "$set": {
-                                "updatedOn": now_ist, # Set last update time
-                                "lastPenaltyAppliedMonths": months_overdue_actual,
-                                 "penalty": updated_total_penalty_applied
-                                }
-                        }
-                    }
-                )
-            if bulk_updates:
-            # Execute bulk updates
-                req = []
-                for item in bulk_updates:
-                    req.append(
-                        pymongo.UpdateOne(item["filter"], item["update"])
-                    )
-                result = remainder_collection.bulk_write(req)
-                return jsonify({"status":"Success","message":f"Penalties updated for {result.modified_count}"}),200
-            else:
-                return jsonify({"status":"Success","message":"No records to update"}),200
-    except Exception as e:
-        return jsonify({"status":"error","message":str(e)})
-    finally:
-        if client:
-            client.close()
-            print("MongoDB connection closed.")    
+  
 
 @app.route("/")
 def home():
