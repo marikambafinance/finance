@@ -11,10 +11,10 @@ import json
 from bson import ObjectId
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
-#rom dotenv import load_dotenv
+from dotenv import load_dotenv
 import time
 import pymongo
-#load_dotenv()
+
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -236,9 +236,39 @@ def get_repayment_info():
         return jsonify({"repayment_data":serialized_repayments,"status":"success"}),200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-@app.route("/")
-def home():
-    return jsonify({"message": "API is running"})
+
+@app.route('/get_customer_loans_with_repayments', methods=['POST'])
+def get_loans_with_repayments():
+    try:
+        data = request.get_json(force=True)
+        hp_number = data.get("hpNumber")
+
+        if not hp_number:
+            return jsonify({"error": "hpNumber is required"}), 400
+
+        loans = list(db.loans.find({"hpNumber": hp_number}))
+
+        # Serialize ObjectId and add repayments to each loan
+        def serialize(doc):
+            doc["_id"] = str(doc["_id"])
+            return doc
+
+        result = []
+        for loan in loans:
+            loan_id = loan["loanId"]
+            repayments = list(db.repayments.find({"loanId": loan_id}))
+            repayments_serialized = [serialize(r) for r in repayments]
+            loan_serialized = serialize(loan)
+            loan_serialized["repayments"] = repayments_serialized
+            result.append(loan_serialized)
+
+        return jsonify({
+            "status": "success",
+            "data": result
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run()
