@@ -283,10 +283,10 @@ def get_loans_with_repayments():
 @app.route("/update_repayment",methods=["POST"])
 def update_repayment():
     data = request.get_json(force=True)
-    required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","amountPaid"}
+    required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","loanId","installmentNumber"}
     try:
         if required_keys.issubset(data):
-            result = collection.update_one({"loanId":data.get("loanID"),"installmentNumber":data.get("installmentNumber")}
+            result = collection.update_one({"loanId":data.get("loanId"),"installmentNumber":data.get("installmentNumber")}
                                         ,{"$set":{
                                             {"amountPaid":data.get("amountPaid"),
                                                 "status":data.get("status"),
@@ -299,7 +299,7 @@ def update_repayment():
                                             }
             }})
             return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
-        else:
+        else:   
             missing = required_keys - data.keys()
             return jsonify({"status":"error","message":f"The following keys are missing: {missing}"}),404
 
