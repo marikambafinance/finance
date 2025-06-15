@@ -1,30 +1,46 @@
-import Home from './pages/Home'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import Customer from './pages/Customer'
-import About from './pages/About'
-import CustomerProvider from './context/CustomersContext'
+import Home from "./pages/Home";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Customer from "./pages/Customer";
+import About from "./pages/About";
+import CustomerProvider from "./context/CustomersContext";
+import CustomerDetails from "./pages/CustomerDetails";
+import LoanListContextProvider from "./context/LoanListContext";
+import LoanRepayments from "./pages/LoanRepayments";
+import TabButtonContextProvider from "./context/TabButtonContext";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Home />
+    element: <Home />,
   },
   {
     path: "/customer",
-    element: <Customer />
+    element: <Customer />,
   },
   {
     path: "/about",
-    element: <About />
-  }
-])
+    element: <About />,
+  },
+  {
+    path: "/customer/customer-details/:hpNumber",
+    element: <CustomerDetails />,
+  },
+  {
+    path: "/customer/loan/:loanId",
+    element: <LoanRepayments />,
+  },
+]);
 
 const App = () => {
   return (
-    <CustomerProvider>
-      <RouterProvider router={router}/>
-    </CustomerProvider>
-  )
-}
+    <TabButtonContextProvider>
+      <CustomerProvider>
+        <LoanListContextProvider>
+          <RouterProvider router={router} />
+        </LoanListContextProvider>
+      </CustomerProvider>
+    </TabButtonContextProvider>
+  );
+};
 
-export default App
+export default App;

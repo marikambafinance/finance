@@ -1,9 +1,12 @@
 import { useForm } from "react-hook-form";
 import { useCreateCustomer } from "../hooks/useCreateCustomer";
 import Loader from "./Loader";
+import Popup from "./Popup";
+import { usePopupContext } from "../context/PopupContext";
 
 const AddCustomer = () => {
     const {createCustomer, loading, setLoading} = useCreateCustomer();
+    const {showPopup, setShowPopup, setType} = usePopupContext();
     
   const {
     register,
@@ -15,14 +18,17 @@ const AddCustomer = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     const res = await createCustomer(data);
+    setType(res.status)
     setLoading(false);
+    setShowPopup(true);
     console.log(res);
     reset();
   };
 
   if(loading) return <Loader />
 
-  return (
+
+  return showPopup ? <Popup title="Customer created successfully"/> : (
     <div className="bg-gradient-to-b w-full max-w-6xl from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
       <main className="w-full max-w-6xl bg-gray-800 rounded-lg shadow-lg p-8 mt-10">
         <div className="text-center mb-6">
@@ -97,6 +103,22 @@ const AddCustomer = () => {
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
           </div>
+          <div>
+            <label className="block mb-1">Vehicle Number</label>
+            <input
+              type="text"
+              {...register("vehicleNumber")}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Chasis Number</label>
+            <input
+              type="text"
+              {...register("chasisNumber")}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
 
           <div>
             <label className="block mb-1">Phone Number</label>
@@ -107,18 +129,6 @@ const AddCustomer = () => {
             />
             {errors.phone && (
               <p className="text-red-400 text-sm">{errors.phone.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block mb-1">HP Number</label>
-            <input
-              type="text"
-              {...register("hpNumber", { required: "HP Number is required" })}
-              className="w-full p-2 rounded bg-gray-700 text-white"
-            />
-            {errors.hpNumber && (
-              <p className="text-red-400 text-sm">{errors.hpNumber.message}</p>
             )}
           </div>
 

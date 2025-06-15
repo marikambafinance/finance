@@ -27,7 +27,7 @@ const Home = () => {
         </p>
         <div className="flex flex-wrap gap-2">
           {buttonList.map((item, idx) => (
-            <Button key={idx} title={item.title} path={item.path} />
+            <Button key={idx} title={item.title} path={item.path} tabName={item?.tabName} />
           ))}
         </div>
       </main>

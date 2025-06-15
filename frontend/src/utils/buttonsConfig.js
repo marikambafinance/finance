@@ -1,12 +1,19 @@
 export const buttonList = [
     {
         title:"Register a customer",
-        path: "/customer"
+        path: "/customer",
+        tabName: "Customers"
     },
     {
         title:"Update a customer",
-        path: "/customer"
-    }
+        path: "/customer",
+        tabName: "Customers List"
+    },
+    {
+        title: "Apply a Loan",
+        path: "/customer",
+        tabName: "Loans"
+    },
 ]
 
 

@@ -4,10 +4,8 @@ import { useCustomers } from "../context/CustomersContext";
 
 const Search = () => {
     const {customers, setCustomers} = useCustomers();
-
     const [search, setSearch] = useState("");
 
-    console.log(customers)
     const handleSearch = ()=>{
         if(customers){
             setCustomers(customers.filter((item) => {

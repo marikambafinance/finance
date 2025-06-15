@@ -1,10 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTabButtonContext } from "../context/TabButtonContext";
 
-const Button = ({ title, path }) => {
+const Button = ({ title, path, tabName }) => {
   const navigate = useNavigate();
+  const {setActiveTab} = useTabButtonContext();
 
   const handleClick = () => {
+    setActiveTab(tabName);
     navigate(path);
   };
   return (
