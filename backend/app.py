@@ -138,6 +138,14 @@ def insert_loan_data(loan_data):
         return {"data":loan_data}
     else:
         return {"error":"hpNumber was not sent"}
+    
+
+def generate_unique_payment_id():
+    # Get last 8 digits of current milliseconds
+    ts_part = str(int(time.time() * 1000))[-8:]
+    # Add 3 random digits
+    rand_part = str(random.randint(100, 999))
+    return ts_part + rand_part
 
 
 def serialize_doc(doc):
@@ -271,6 +279,33 @@ def get_loans_with_repayments():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route("/update_repayment",methods=["POST"])
+def update_repayment():
+    data = request.get_json(force=True)
+    required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","amountPaid"}
+    try:
+        if required_keys.issubset(data):
+            result = collection.update_one({"loanId":data.get("loanID"),"installmentNumber":data.get("installmentNumber")}
+                                        ,{"$set":{
+                                            {"amountPaid":data.get("amountPaid"),
+                                                "status":data.get("status"),
+                                                "paymentDate":datetime.now(ZoneInfo("Asia/Kolkata")),
+                                                "paymentId":generate_unique_payment_id(),
+                                                "paymentMode":data.get("paymentMode"),
+                                                "recoveryAgent":data.get("recoveryAgent"),
+                                                "totalAmountDue":data.get("totalAmountDue"),
+                                                "amountPaid":data.get("amountPaid")
+                                            }
+            }})
+            return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
+        else:
+            missing = required_keys - data.keys()
+            return jsonify({"status":"error","message":f"The following keys are missing: {missing}"}),404
+
+        
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}),500
     
 @app.route("/")
 def home():
