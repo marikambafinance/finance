@@ -21,7 +21,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 
@@ -244,17 +244,19 @@ def get_loans_with_repayments():
 
         if not hp_number:
             return jsonify({"error": "hpNumber is required"}), 400
-
-        loans = list(db.loans.find({"hpNumber": hp_number}))
-
-        # Serialize ObjectId and add repayments to each loan
         def serialize(doc):
             doc["_id"] = str(doc["_id"])
             return doc
+        loans = list(db.loans.find({"hpNumber": hp_number}))
+        customer_details = collection.find_one({"hpNumber": hp_number},{"firstName":1,"lastName":1,"phone":1,"_id":0})
+        #customer_seralized = serialize(customer_details)
+        # Serialize ObjectId and add repayments to each loan
+        
 
         result = []
         for loan in loans:
             loan_id = loan["loanId"]
+            
             repayments = list(db.repayments.find({"loanId": loan_id}))
             repayments_serialized = [serialize(r) for r in repayments]
             loan_serialized = serialize(loan)
@@ -263,7 +265,8 @@ def get_loans_with_repayments():
 
         return jsonify({
             "status": "success",
-            "data": result
+            "data": result,
+            "customerDetails":customer_details
         })
 
     except Exception as e:
