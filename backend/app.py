@@ -132,14 +132,15 @@ def total_loan_payable(loanId):
                 {"$match": {"loanId": loanId}},  # Filter by loanId
                 {"$group": {
                     "_id": "$loanId",
-                    "total_payable": {"$sum": "$totalAmountDue"}
+                    "total_payable": {"$sum": { "$toDouble": "$totalAmountDue" }}
                 }}
             ]
     result = list(db.repayments.aggregate(pipeline))
     old_total = float(db.loans.find_one({"loanId":loanId},{"totalPayable":1})["totalPayable"])
-    new_total = float(result[0]["total_payable"])
+    new_total = round(float(result[0]["total_payable"]),1)
+    print(new_total,old_total)
     if new_total>old_total:
-        db.loans.update_one({"loanId":loanId},{"$set":{"totalPayable":new_total}})
+        db.loans.update_one({"loanId":loanId},{"$set":{"totalPayable":str(new_total)}})
         return str(new_total)
     else:
         return str(old_total)   
