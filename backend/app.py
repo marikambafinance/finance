@@ -228,7 +228,7 @@ def get_customer_loans():
     return jsonify({"status":"Success","response":convert_objectids(result)})
     
 
-@app.route('/get_customer_repayment_info', methods=['GET'])
+@app.route('/get_customer_repayment_info', methods=['POST'])
 def get_repayment_info():
     data = request.get_json(force=True)
     
@@ -296,7 +296,13 @@ def update_repayment():
                                                 }
                                             }
                                         )
-            return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
+            if result.matched_count == 0:
+                return jsonify({"status":"error","message":"No document matched the query. Check loanId or installmentNumber."}),400
+            elif result.modified_count == 0:
+                return jsonify({"status":"error","message":"Document matched but no fields were updated (values may be the same)."}),400
+            else:
+                return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
+
         else:   
             missing = required_keys - data.keys()
             return jsonify({"status":"error","message":f"The following keys are missing: {missing}"}),404
