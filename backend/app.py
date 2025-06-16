@@ -127,6 +127,24 @@ def insert_customer(customer_data):
         customer_data.pop("_id",None)
         return {"insert_id": str(result.inserted_id),"data":customer_data}
 
+def total_loan_payable(loanId):
+    pipeline = [
+                {"$match": {"loanId": loanId}},  # Filter by loanId
+                {"$group": {
+                    "_id": "$loanId",
+                    "total_payable": {"$sum": "$totalAmountDue"}
+                }}
+            ]
+    result = list(db.repayments.aggregate(pipeline))
+    refrence_result = float(db.loans.find_one({"loanId":loanId})["loanAmount"])
+    old_total = float(db.loans.find_one({"loanId":loanId},{"totalPayable":1})["totalPayable"])
+    new_total = float(result[0]["total_payable"])
+    if new_total!=old_total and new_total >refrence_result:
+        db.loans.update_one({"loanId":loanId},{"$set":{"totalPayable":new_total}})
+        return str(new_total)
+    else:
+        return str(old_total)   
+
 
 def insert_loan_data(loan_data):
     #print(loan_data)
@@ -263,6 +281,8 @@ def get_loans_with_repayments():
         result = []
         for loan in loans:
             loan_serialized = serialize(loan)
+            total =total_loan_payable(loan["loanId"])
+            loan_serialized["totalPayable"]=total
             result.append(loan_serialized)
 
         return jsonify({
