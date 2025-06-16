@@ -285,18 +285,22 @@ def update_repayment():
     required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","loanId","installmentNumber"}
     try:
         if required_keys.issubset(data):
-            result = collection.update_one({"loanId":data.get("loanId"),"installmentNumber":data.get("installmentNumber")}
-                                        ,{"$set":{
-                                            {"amountPaid":data.get("amountPaid"),
-                                                "status":data.get("status"),
-                                                "paymentDate":datetime.now(ZoneInfo("Asia/Kolkata")),
-                                                "paymentId":generate_unique_payment_id(),
-                                                "paymentMode":data.get("paymentMode"),
-                                                "recoveryAgent":data.get("recoveryAgent"),
-                                                "totalAmountDue":data.get("totalAmountDue"),
-                                                "amountPaid":data.get("amountPaid")
+            result = collection.update_one( {
+                                                "loanId": data.get("loanId"),
+                                                "installmentNumber": data.get("installmentNumber")
+                                            },
+                                            {
+                                                "$set": {
+                                                    "amountPaid": data.get("amountPaid"),
+                                                    "status": data.get("status"),
+                                                    "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
+                                                    "paymentId": generate_unique_payment_id(),
+                                                    "paymentMode": data.get("paymentMode"),
+                                                    "recoveryAgent": data.get("recoveryAgent"),
+                                                    "totalAmountDue": data.get("totalAmountDue")
+                                                }
                                             }
-            }})
+                                        )
             return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
         else:   
             missing = required_keys - data.keys()
