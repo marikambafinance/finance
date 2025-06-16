@@ -19,8 +19,8 @@ CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
 
-mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+#mongo_uri=os.getenv("MONGO_URI")
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 
@@ -285,9 +285,9 @@ def update_repayment():
     required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","loanId","installmentNumber"}
     try:
         if required_keys.issubset(data):
-            result = collection.update_one( {
-                                                "loanId": data.get("loanId"),
-                                                "installmentNumber": data.get("installmentNumber")
+            result = db.repayments.update_one( {
+                                                "loanId": data.get("loanId").strip(),
+                                                "installmentNumber": int(data.get("installmentNumber"))
                                             },
                                             {
                                                 "$set": {
