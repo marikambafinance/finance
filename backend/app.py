@@ -228,7 +228,7 @@ def get_customer_loans():
     return jsonify({"status":"Success","response":convert_objectids(result)})
     
 
-@app.route('/get_customer_repayment_info', methods=['POST'])
+@app.route('/get_customer_repayment_info', methods=['GET'])
 def get_repayment_info():
     data = request.get_json(force=True)
     
@@ -243,7 +243,7 @@ def get_repayment_info():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get_customer_loans_with_repayments', methods=['POST'])
+@app.route('/get_customer_loans', methods=['POST'])
 def get_loans_with_repayments():
     try:
         data = request.get_json(force=True)
@@ -262,12 +262,7 @@ def get_loans_with_repayments():
 
         result = []
         for loan in loans:
-            loan_id = loan["loanId"]
-            
-            repayments = list(db.repayments.find({"loanId": loan_id}))
-            repayments_serialized = [serialize(r) for r in repayments]
             loan_serialized = serialize(loan)
-            loan_serialized["repayments"] = repayments_serialized
             result.append(loan_serialized)
 
         return jsonify({
