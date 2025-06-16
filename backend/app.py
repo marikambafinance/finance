@@ -138,7 +138,6 @@ def total_loan_payable(loanId):
     result = list(db.repayments.aggregate(pipeline))
     old_total = float(db.loans.find_one({"loanId":loanId},{"totalPayable":1})["totalPayable"])
     new_total = round(float(result[0]["total_payable"]),1)
-    print(new_total,old_total)
     if new_total>old_total:
         db.loans.update_one({"loanId":loanId},{"$set":{"totalPayable":str(new_total)}})
         return str(new_total)
