@@ -26,31 +26,27 @@ collection = db.customers
 
 BASE62_ALPHABET = string.digits + string.ascii_uppercase
 
-def int_to_base62(num):
-    if num == 0:
-        return BASE62_ALPHABET[0]
-    base62 = []
-    while num:
-        num, rem = divmod(num, 36)
-        base62.append(BASE62_ALPHABET[rem])
-    return ''.join(reversed(base62))
 
-def generate_secure_id(firstName, lastName,random_length=3):
-    # Take first letters uppercase
-    initials = (firstName[0] + lastName[0]).upper()
-    
-    # Get timestamp as YYMMDDHHMM
-    dt_str = datetime.now().strftime("%y%m%d%H%M")
-    dt_num = int(dt_str)
-    
-    # Encode timestamp to base62
-    encoded_dt = int_to_base62(dt_num)
-    
-    # Add random suffix for collision safety
-    suffix = ''.join(random.choices(BASE62_ALPHABET, k=random_length))
-    
-    # Combine all parts
-    return f"{initials}{encoded_dt}{suffix}"
+def generate_secure_id(firstName, lastName):
+    year_suffix = str(datetime.now().year)[-2:]
+    initials = firstName[0].upper() + lastName[0].upper()
+
+    prefix = f"MF{year_suffix}{initials}"
+
+    # Get the latest ID with the same prefix
+    last_entry = collection.find_one(
+        {"unique_id": {"$regex": f"^{prefix}"}},
+        sort=[("unique_id", -1)]
+    )
+
+    if last_entry:
+        last_seq = int(last_entry["unique_id"][-5:])
+        new_seq = last_seq + 1
+    else:
+        new_seq = 1
+
+    new_id = f"{prefix}{new_seq:05d}"  # pad sequence with zeros
+    return new_id
 
 
 def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
