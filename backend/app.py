@@ -44,7 +44,7 @@ def generate_secure_id(firstName, lastName):
     )
 
     if last_entry:
-        last_seq = int(last_entry["unique_id"][-5:])
+        last_seq = int(last_entry["hpNumber"][-5:])
         new_seq = last_seq + 1
     else:
         new_seq = 1
