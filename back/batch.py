@@ -21,9 +21,12 @@ CORS(app)
 account_sid = 'your_account_sid'  # Find in Twilio Console
 auth_token = 'your_auth_token'    # Find in Twilio Console
 twilio_whatsapp_number = 'whatsapp:+14155238886'
-client = Client(account_sid, auth_token)
+Client = Client(account_sid, auth_token)
+mongo_uri = os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
+
 
 def calculate_months_overdue(due_date, current_date,GRACE_PERIOD_DAYS):
     if current_date < due_date + timedelta(days=GRACE_PERIOD_DAYS):
@@ -96,18 +99,21 @@ def home():
     return jsonify({"message": "API is running"})
 
 @app.route("/update_penalty", methods=['GET'])
-def apply_monthly_penalties():
+def apply_monthly_penalties(): 
     PENALTY_PER_MONTH = 300
     GRACE_PERIOD_DAYS = 5
     try:
         remainder_collection = db.repayments
+        print(remainder_collection)
         now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
         overdue_repayments = remainder_collection.find({
             "status": {"$ne": "paid"},
             "dueDate": {"$lt": now_ist} # Initial filter: due date is in the past
         })
+
         bulk_updates = []
         for repayment in overdue_repayments:
+            print(repayment)
             repayment_id = repayment['_id']
             due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
             emi = repayment["amountDue"]
@@ -134,28 +140,26 @@ def apply_monthly_penalties():
                             "$set": {
                                 "updatedOn": now_ist, # Set last update time
                                 "lastPenaltyAppliedMonths": months_overdue_actual,
-                                 "penalty": updated_total_penalty_applied
+                                "penalty": updated_total_penalty_applied
                                 }
                         }
                     }
                 )
-            if bulk_updates:
-            # Execute bulk updates
-                req = []
-                for item in bulk_updates:
-                    req.append(
-                        pymongo.UpdateOne(item["filter"], item["update"])
-                    )
-                result = remainder_collection.bulk_write(req)
-                return jsonify({"status":"Success","message":f"Penalties updated for {result.modified_count}"}),200
-            else:
-                return jsonify({"status":"Success","message":"No records to update"}),200
+
+        if bulk_updates:
+        # Execute bulk updates
+            req = []
+            for item in bulk_updates:
+                req.append(
+                    pymongo.UpdateOne(item["filter"], item["update"])
+                )
+            result = remainder_collection.bulk_write(req)
+            return jsonify({"status":"Success","message":f"Penalties updated for {result.modified_count}"}),200
+        else:
+            return jsonify({"status":"Success","message":"No records to update"}),200
     except Exception as e:
         return jsonify({"status":"error","message":str(e)})
-    finally:
-        if client:
-            client.close()
-            print("MongoDB connection closed.")  
+
 
 if __name__ == '__main__':
     app.run()
