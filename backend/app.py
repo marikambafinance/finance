@@ -19,8 +19,8 @@ CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
 
-#mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+mongo_uri=os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
 
@@ -182,7 +182,7 @@ def submit_data():
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/customers", methods=["POST"])
+@app.route("/customers", methods=["GET"])
 def get_all_customers():
     customers = list(collection.find())
     serialized_customers = [serialize_doc(doc) for doc in customers]
