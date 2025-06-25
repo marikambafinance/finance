@@ -19,8 +19,8 @@ CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
 
-mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+#mongo_uri=os.getenv("MONGO_URI")
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 
@@ -188,15 +188,19 @@ def get_all_customers():
     serialized_customers = [serialize_doc(doc) for doc in customers]
     return jsonify({"customers_data":serialized_customers,"status":"success"}),200
 
-@app.route("/only_customer_and_loans",methods=["GET"])
+@app.route("/only_customer_and_loans",methods=["POST"])
 def get_all_customers_loans():
-    customers = list(collection.find())
-    serialized_customers = [serialize_doc(doc) for doc in customers]
-    for customer in serialized_customers:
-        loans = list(db.loans.find({"hpNumber":customer["hpNumber"]}))
-        serialized_loans = [serialize_doc(doc) for doc in loans]
-        customer["loans"]= serialized_loans
-    return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+    data = request.get_json(force=True)
+    if "hpNumber" in data.keys():
+        customers = list(collection.find({"hpNumber":data["hpNumber"]}))
+        serialized_customers = [serialize_doc(doc) for doc in customers]
+        for customer in serialized_customers:
+            loans = list(db.loans.find({"hpNumber":customer["hpNumber"]}))
+            serialized_loans = [serialize_doc(doc) for doc in loans]
+            customer["loans"]= serialized_loans
+        return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+    else:
+        return jsonify({"message":"missing hpNumber","status":"error"}),400
 
 
 @app.route("/loan", methods=["POST"])
