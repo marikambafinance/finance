@@ -27,7 +27,7 @@ collection = db.customers
 BASE62_ALPHABET = string.digits + string.ascii_uppercase
 
 
-def generate_secure_id(firstName, lastName, collection):
+def generate_secure_id(firstName, lastName):
     if not firstName or not lastName:
         raise ValueError("First name and last name must not be empty.")
 
