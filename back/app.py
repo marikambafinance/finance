@@ -51,6 +51,20 @@ def calculate_penalty(start_date, end_date, monthly_penalty=500):
 
     return months * monthly_penalty, months
 
+
+def is_not_greater_than_one_month(start_date, end_date):
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+
+    diff = relativedelta(end_date, start_date)
+    months = diff.years * 12 + diff.months
+
+    # Check: more than 1 month (not equal to 1)
+    if months > 1 or (months == 1 and diff.days > 0):
+        return False
+    return True
+
+
 def calculate_months_overdue(due_date, current_date,GRACE_PERIOD_DAYS):
     if current_date < due_date + timedelta(days=GRACE_PERIOD_DAYS):
         return 0
@@ -136,26 +150,33 @@ def apply_monthly_penalties_new():
 
         bulk_updates = []
         for repayment in overdue_repayments:
-            print(repayment)
             repayment_id = repayment['_id']
             due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
             due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-            print(current_date,due_date)
+           
             emi = float(repayment["amountDue"])
-            penalty,months = calculate_penalty(due_date,current_date)
-            bulk_updates.append(
-                {
-                    "filter": {"_id": repayment_id},
-                    "update": {
-                        "$set": {
-                            "updatedOn": current_date, # Set last update time
-                            "TotalPenaltyMonths": months,
-                            "penalty": penalty,
-                            "totalAmountDue": str(emi+penalty)
-                            }
+            updatedOn = repayment.get("updatedOn",None)
+       
+            if updatedOn:
+                updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+        
+            if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
+                pass
+            else:
+                penalty,months = calculate_penalty(due_date,current_date)
+                bulk_updates.append(
+                    {
+                        "filter": {"_id": repayment_id},
+                        "update": {
+                            "$set": {
+                                "updatedOn": current_date, # Set last update time
+                                "TotalPenaltyMonths": months,
+                                "penalty": penalty,
+                                "totalAmountDue": str(emi+penalty)
+                                }
+                        }
                     }
-                }
-            )
+                )
         if bulk_updates:
         # Execute bulk updates
             req = []
