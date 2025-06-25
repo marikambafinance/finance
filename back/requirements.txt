@@ -1,1 +1,6 @@
-requests
+Flask
+pymongo
+gunicorn
+flask-cors
+pytz
+twilio
