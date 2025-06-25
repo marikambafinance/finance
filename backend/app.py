@@ -27,15 +27,19 @@ collection = db.customers
 BASE62_ALPHABET = string.digits + string.ascii_uppercase
 
 
-def generate_secure_id(firstName, lastName):
+def generate_secure_id(firstName, lastName, collection):
+    if not firstName or not lastName:
+        raise ValueError("First name and last name must not be empty.")
+
     year_suffix = str(datetime.now().year)[-2:]
     initials = firstName[0].upper() + lastName[0].upper()
-
     prefix = f"MF{year_suffix}{initials}"
 
-    # Get the latest ID with the same prefix
+    # Match any ID from the current year, regardless of initials
+    year_prefix = f"MF{year_suffix}"
+
     last_entry = collection.find_one(
-        {"unique_id": {"$regex": f"^{prefix}"}},
+        {"unique_id": {"$regex": f"^{year_prefix}[A-Z]{{2}}\d{{5}}$"}},
         sort=[("unique_id", -1)]
     )
 
@@ -45,7 +49,7 @@ def generate_secure_id(firstName, lastName):
     else:
         new_seq = 1
 
-    new_id = f"{prefix}{new_seq:05d}"  # pad sequence with zeros
+    new_id = f"{prefix}{new_seq:05d}"
     return new_id
 
 
