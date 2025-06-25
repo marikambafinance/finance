@@ -31,7 +31,7 @@ collection = db.customers
 
 
 
-def calculate_penalty(start_date, end_date, monthly_penalty=500):
+def calculate_penalty(start_date, end_date, monthly_penalty=300):
     if end_date < start_date:
         return 0  # or raise error if needed
 
