@@ -186,11 +186,18 @@ def submit_data():
 def get_all_customers():
     customers = list(collection.find())
     serialized_customers = [serialize_doc(doc) for doc in customers]
+    return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+
+@app.route("/only_customer_and_loans",methods=["GET"])
+def get_all_customers_loans():
+    customers = list(collection.find())
+    serialized_customers = [serialize_doc(doc) for doc in customers]
     for customer in serialized_customers:
         loans = list(db.loans.find({"hpNumber":customer["hpNumber"]}))
         serialized_loans = [serialize_doc(doc) for doc in loans]
         customer["loans"]= serialized_loans
     return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+
 
 @app.route("/loan", methods=["POST"])
 def submit_loan():
