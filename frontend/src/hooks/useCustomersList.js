@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useCustomers } from "../context/CustomersContext";
 
+let customerList;
+
 export const useCustomersList = () => {
   const { customers, setCustomers} = useCustomers();
   const [loading, setLoading] = useState(true);
@@ -13,6 +15,7 @@ export const useCustomersList = () => {
       );
       const result = await res.json();
       setCustomers(result?.customers_data);
+      customerList = result?.customers_data;
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -31,5 +34,5 @@ export const useCustomersList = () => {
     getCustomersList();
   }, []);
 
-  return { loading, error, setLoading, getCustomersList};
+  return { loading, error, setLoading, getCustomersList, customerList};
 };

@@ -1,136 +1,212 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import {
+  Mail,
+  Phone,
+  User,
+  Bike,
+  Calendar,
+  Landmark,
+  MapPin,
+  IdCard,
+  Briefcase,
+  DollarSign,
+  Heart,
+  Edit3,
+  Save,
+  Watch,
+} from "lucide-react";
+import { useForm } from "react-hook-form";
 import Navbar from "../components/Navbar";
+import useCustomerDetails from "../hooks/useCustomerDetails";
+import { useLocation } from "react-router-dom";
+import EditableFieldWithIcon from "../components/EditableFieldWithIcon";
 
-const CustomerDetails = ({ customer }) => {
-  const defaultCustomer = {
-    firstName: "Nora",
-    lastName: "Fatehi",
-    dob: "1992-03-01",
-    gender: "Female",
-    maritalStatus: "Single",
-    email: "nora.f@example.com",
-    phone: "9876543210",
-    address: "Mumbai, India",
-    zip: "400001",
-    hpNumber: "HP99321",
-    aadhaarOrPan: "XYZPF1234L",
-    employmentStatus: "Self-Employed",
-    occupation: "Performer",
-    annualIncome: 2500000,
+const CustomerDetails = () => {
+  const location = useLocation();
+  const { hpNumber } = location?.state || {};
+  const { custDetails } = useCustomerDetails(hpNumber);
+
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleCancel = () => {
+    reset(custDetails);
+    setIsEditing(false);
   };
 
-  const [data, setData] = useState(customer || defaultCustomer);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm();
 
-  const handleChange = (key, value) => {
-    setData((prev) => ({ ...prev, [key]: value }));
-  };
+  const editableFieldInfo = [
+    {
+      name: "firstName",
+      label: "First Name",
+      icon: <User />,
+      value: watch("firstName"),
+    },
+    {
+      name: "lastName",
+      label: "Last Name",
+      icon: <User />,
+      value: watch("lastName"),
+    },
+    {
+      name: "aadhaarOrPan",
+      label: "Aadhaar/PAN",
+      icon: <IdCard />,
+      value: watch("aadhaarOrPan"),
+    },
+    {
+      name: "address",
+      label: "Address",
+      icon: <Landmark />,
+      value: watch("address"),
+    },
+    {
+      name: "zip",
+      label: "Zip Code",
+      icon: <MapPin />,
+      value: watch("zip"),
+    },
+    {
+      name: "email",
+      label: "Email ID",
+      icon: <Mail />,
+      value: watch("email"),
+    },
+    {
+      name: "chasisNumber",
+      label: "Chasis Number",
+      icon: <MapPin />,
+      value: watch("chasisNumber"),
+      type: "number"
+    },
+    {
+      name: "phone",
+      label: "Phone Number",
+      icon: <Phone />,
+      value: watch("phone"),
+      type: "number"
+    },
+    {
+      name: "vehicleNumber",
+      label: "Vehicle Number",
+      icon: <Bike />,
+      value: watch("vehicleNumber"),
+    },
+    {
+      name: "occupation",
+      label: "Occupation",
+      icon: <Briefcase />,
+      value: watch("occupation"),
+    },
+  ];
 
-  const handleUpdate = () => {
-    // Placeholder for update logic
-    console.log("Updated data:", data);
+  useEffect(() => {
+    if (custDetails) {
+      reset(custDetails);
+    }
+  }, [custDetails]);
+
+  const onSubmit = (data) => {
+    console.log(data)
+    reset(custDetails)
+    setIsEditing(false);
   };
 
   return (
     <div className="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
       <Navbar />
-      <div className="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen p-8 text-white flex justify-center items-center">
-        <div className="bg-gray-800 bg-opacity-90 rounded-2xl shadow-2xl p-10 w-full max-w-3xl">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-4xl text-teal-300 font-bold animate-pulse">
-              {data.firstName} {data.lastName}
-            </h2>
-            <button
-              onClick={handleUpdate}
-              className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded-full shadow"
-            >
-              Update
-            </button>
+      <div className="w-full text-white flex flex-col items-center p-6">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="w-full max-w-6xl mx-auto bg-gray-900 rounded-3xl shadow-2xl p-10 relative border border-gray-800"
+        >
+          <div className="flex justify-between items-center mb-10">
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
+              🧾 Customer Profile
+            </h1>
+
+            {isEditing ? (
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow transition"
+                >
+                  <Save className="w-4 h-4" />
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl shadow hover:scale-105 transition"
+              >
+                <Edit3 className="w-4 h-4" />
+                Edit
+              </button>
+            )}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 text-sm">
-            <EditableField
-              label="Date of Birth"
-              value={data.dob}
-              onChange={(v) => handleChange("dob", v)}
-            />
-            <EditableField
-              label="Gender"
-              value={data.gender}
-              onChange={(v) => handleChange("gender", v)}
-            />
-            <EditableField
-              label="Marital Status"
-              value={data.maritalStatus}
-              onChange={(v) => handleChange("maritalStatus", v)}
-            />
-            <EditableField
-              label="Email"
-              value={data.email}
-              onChange={(v) => handleChange("email", v)}
-            />
-            <EditableField
-              label="Phone"
-              value={data.phone}
-              onChange={(v) => handleChange("phone", v)}
-            />
-            <EditableField
-              label="Address"
-              value={data.address}
-              onChange={(v) => handleChange("address", v)}
-            />
-            <EditableField
-              label="ZIP Code"
-              value={data.zip}
-              onChange={(v) => handleChange("zip", v)}
-            />
-            <EditableField
-              label="HP Number"
-              value={data.hpNumber}
-              onChange={(v) => handleChange("hpNumber", v)}
-            />
-            <EditableField
-              label="Aadhaar / PAN"
-              value={data.aadhaarOrPan}
-              onChange={(v) => handleChange("aadhaarOrPan", v)}
-            />
-            <EditableField
-              label="Employment Status"
-              value={data.employmentStatus}
-              onChange={(v) => handleChange("employmentStatus", v)}
-            />
-            <EditableField
-              label="Occupation"
-              value={data.occupation}
-              onChange={(v) => handleChange("occupation", v)}
-            />
-            <EditableField
-              label="Annual Income"
-              value={data.annualIncome}
-              onChange={(v) => handleChange("annualIncome", Number(v))}
-              isCurrency
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 text-lg">
+              {editableFieldInfo?.map(({ name, value, icon, label, type }) => (
+                  <EditableFieldWithIcon
+                    key={name}
+                    name={name}
+                    value={value}
+                    icon={icon}
+                    label={label}
+                    register={register}
+                    isEditing={isEditing}
+                    type={type}
+                  />
+              ))}
           </div>
-        </div>
+
+          <div>
+            <h2 className="text-3xl font-semibold text-cyan-300 mb-4 border-b border-gray-700 pb-2">
+              💳 Loan Accounts
+            </h2>
+            <div className="space-y-4">
+              {custDetails?.loans.map((loan) => (
+                <div
+                  key={loan?.loanId}
+                  className="p-5 bg-gray-800 rounded-xl flex justify-between items-center border border-gray-700 hover:bg-gray-700 transition duration-300"
+                >
+                  <div>
+                    <p className="text-white font-semibold text-lg">
+                      Purpose: {loan.purpose}
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      Loan ID: {loan?.loanId}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-lg">Total Amount</p>
+                    <p className="text-cyan-400 font-bold text-xl">
+                      ₹{parseFloat(loan?.totalPayable).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
-
-const EditableField = ({ label, value, onChange, isCurrency }) => (
-  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg shadow">
-    <div className="text-teal-400 font-semibold mb-1">{label}</div>
-    <input
-      type={typeof value === "number" ? "number" : "text"}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-gray-600 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-400"
-    />
-    {isCurrency && (
-      <div className="text-gray-400 text-xs mt-1">
-        (₹ {Number(value).toLocaleString()})
-      </div>
-    )}
-  </div>
-);
 
 export default CustomerDetails;

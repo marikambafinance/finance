@@ -5,7 +5,7 @@ const useLoanWithRepaymentsList = ()=>{
     const {setLoanList} = useLoanListContext();
 
     const fetchLoanList = async (hpNumber)=>{
-        const res = await fetch("https://mariamma-finance.onrender.com/get_customer_loans_with_repayments",{
+        const res = await fetch("https://mariamma-finance.onrender.com/get_customer_loans",{
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"

@@ -3,7 +3,7 @@ import moment from "moment-timezone";
 import { useForm } from "react-hook-form";
 import Loader from "./Loader";
 
-const RepaymentCard = ({ repayment }) => {
+const RepaymentCard = ({ repayment, onUpdateSuccess }) => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -11,8 +11,9 @@ const RepaymentCard = ({ repayment }) => {
     defaultValues: {
       loanId: repayment?.loanId,
       installmentNumber: repayment?.installmentNumber,
+      amountDue: repayment?.amountDue,
       amountPaid: repayment?.amountPaid,
-      totalAmountDue: repayment?.totalAmountDue,
+      totalAmountDue: parseFloat(parseFloat(repayment?.amountDue) + parseFloat(repayment?.penalty)),
       recoveryAgent: repayment?.recoveryAgent || false,
       status: repayment?.status,
       paymentMode: repayment?.paymentMode || "-",
@@ -31,25 +32,61 @@ const RepaymentCard = ({ repayment }) => {
     }
   };
 
-  const updateRepayment = async (data)=>{
-    const res = await fetch("https://mariamma-finance.onrender.com/update_repayment",{
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    })
+  const updateRepayment = async (data) => {
+    const res = await fetch(
+      "https://mariamma-finance.onrender.com/update_repayment",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
     const result = await res.json();
     console.log(result);
+  };
+
+  const handleCheckboxChange = ()=>{
+    if(editMode){
+      setValue("recoveryAgent", !watch("recoveryAgent"))
+      
+      if(watch("recoveryAgent")){ 
+        const totalAmount = parseFloat(watch("totalAmountDue")) + 500;
+        setValue("totalAmountDue", totalAmount)
+        if(watch("status") === "paid"){
+          setValue("amountPaid", totalAmount);
+        }
+      }else{
+        const totalAmount = parseFloat(watch("totalAmountDue")) - 500;
+        setValue("totalAmountDue", totalAmount)
+        if(watch("status") === "paid"){
+          setValue("amountPaid", totalAmount);
+        }
+      }
+    }
   }
 
+  useEffect(() => {
+    reset({
+      loanId: repayment?.loanId,
+      installmentNumber: repayment?.installmentNumber,
+      amountPaid: repayment?.amountPaid,
+      totalAmountDue: repayment?.totalAmountDue,
+      recoveryAgent: repayment?.recoveryAgent || false,
+      status: repayment?.status,
+      paymentMode: repayment?.paymentMode || "-",
+    });
+  }, [repayment, reset]);
+
   const onSubmit = async (data) => {
-    console.log(data)
+    console.log(data);
     setLoading(true);
-    await updateRepayment(data)
-    setLoading(false)
+    await updateRepayment(data);
+    setLoading(false);
     reset();
     setEditMode(false); // Exit edit mode after update
+    onUpdateSuccess();
   };
 
   const handleCancel = () => {
@@ -57,7 +94,7 @@ const RepaymentCard = ({ repayment }) => {
     setEditMode(false);
   };
 
-  if(loading) return <Loader />
+  if (loading) return <Loader />;
 
   return (
     <form
@@ -80,11 +117,11 @@ const RepaymentCard = ({ repayment }) => {
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Amount Due</span>
-          <span>₹{repayment?.amountDue}</span>
+          <span>₹{parseFloat(repayment?.amountDue).toLocaleString("en-IN")}</span>
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Amount Paid</span>
-          <span>₹{watch("amountPaid")}</span>
+          <span>₹{parseFloat(watch("amountPaid")).toLocaleString("en-IN")}</span>
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Penalty</span>
@@ -92,7 +129,7 @@ const RepaymentCard = ({ repayment }) => {
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Total Amount Due</span>
-          <span>₹{watch("totalAmountDue")}</span>
+          <span>₹{parseFloat(watch("totalAmountDue")).toLocaleString("en-IN")}</span>
         </div>
 
         {/* STATUS */}
@@ -148,6 +185,12 @@ const RepaymentCard = ({ repayment }) => {
             type="checkbox"
             {...register("recoveryAgent")}
             checked={watch("recoveryAgent")}
+            onChange={handleCheckboxChange}
+            onClick={(e)=> {
+              if(editMode === false){
+                e.preventDefault();
+              }
+            }}
           />
 
           <span className="text-sm">Recovery Agent</span>

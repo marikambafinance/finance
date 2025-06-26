@@ -18,7 +18,7 @@ const AddCustomer = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     const res = await createCustomer(data);
-    setType(res.status)
+    setType(res?.status);
     setLoading(false);
     setShowPopup(true);
     console.log(res);

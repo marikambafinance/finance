@@ -6,7 +6,7 @@ const CustomerDataCard = ({ customer }) => {
     const navigate = useNavigate();
 
     const handleCustomer = ()=>{
-        navigate(`/customer/customer-details/${customer.CustomerID}`)
+        navigate(`/customer/customer-details/${customer?.hpNumber}`,{state: {hpNumber: customer?.hpNumber}})
     }
 
   return (
@@ -17,7 +17,7 @@ const CustomerDataCard = ({ customer }) => {
       <div>{customer.hpNumber}</div>
       <div>{customer.phone}</div>
       <div>{customer.aadhaarOrPan}</div>
-      <div>₹{customer.annualIncome}</div>
+      <div className="font-bold text-green-400">₹ {parseFloat(customer.annualIncome).toLocaleString("en-IN")}</div>
       <div>
         <button 
             onClick={handleCustomer}

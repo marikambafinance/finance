@@ -2,14 +2,18 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const LoanCard = ({ loan, customerDetails }) => {
-  console.log(loan)
-  console.log(customerDetails)
+  console.log(loan);
 
   const navigate = useNavigate();
 
-  const handleNavigation = ()=>{
-    navigate(`/customer/loan/${loan.loanId}`,{state: {loan: loan, customerDetails: customerDetails}})
-  }
+  const handleNavigation = () => {
+    navigate(`/customer/loan/${loan.loanId}`, {
+      state: {
+        loan: { loanId: loan?.loanId, hpNumber: loan?.hpNumber, loanAmount: loan?.loanAmount, totalPayable: loan?.totalPayable },
+        customerDetails: customerDetails,
+      },
+    });
+  };
 
   return (
     <div className="bg-gray-800 my-1 rounded-2xl p-6 text-white shadow-xl w-full overflow-x-auto hover:shadow-2xl transition-shadow duration-500 border border-gray-600 backdrop-blur-md">
@@ -33,7 +37,7 @@ const LoanCard = ({ loan, customerDetails }) => {
             Total Payable
           </span>
           <span className="text-base font-medium text-green-400">
-            ₹{loan.totalPayable}
+            ₹{parseFloat(loan.totalPayable).toLocaleString("en-IN")}
           </span>
         </div>
 

@@ -12,8 +12,8 @@ const Repayment = () => {
   const [hpNumber, setHpNumber] = useState("");
 
   const handleClick = async () => {
-    setLoading(true);
     if (!hpNumber) return;
+    setLoading(true);
     await fetchLoanWithRepayments(hpNumber);
     setLoading(false);
     setHpNumber("");

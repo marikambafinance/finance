@@ -1,28 +1,39 @@
 import React, { useState } from "react";
-import { useCustomersList } from "../hooks/useCustomersList";
 import { useCustomers } from "../context/CustomersContext";
+import { useCustomersList } from "../hooks/useCustomersList";
 
 const Search = () => {
-    const {customers, setCustomers} = useCustomers();
-    const [search, setSearch] = useState("");
+  const { customers, setCustomers } = useCustomers();
+  const [search, setSearch] = useState("");
+  const {customerList} = useCustomersList();
 
-    const handleSearch = ()=>{
-        if(customers){
-            setCustomers(customers.filter((item) => {
-                if(item.CustomerID.includes(search)){
-                    return true;
-                }else if(item.firstName.toLowerCase().includes(search.toLowerCase())){
-                    console.log(item.firstName.toLowerCase())
-                    return true;
-                }else if(item.lastName.toLowerCase().includes(search.toLowerCase())){
-                    return true;
-                }else if(item.phone.includes(search)){
-                    return true;
-                }
-            }))
-        }
-        setSearch("");
+  const handleSearch = () => {
+    if (customers) {
+      if(!search){
+        setCustomers(customerList);
+        return;
+      }
+      setCustomers(
+        customers.filter((item) => {
+          if (item?.hpNumber.includes(search)) {
+            return true;
+          } else if (
+            item.firstName.toLowerCase().includes(search.toLowerCase())
+          ) {
+            console.log(item.firstName.toLowerCase());
+            return true;
+          } else if (
+            item.lastName.toLowerCase().includes(search.toLowerCase())
+          ) {
+            return true;
+          } else if (item.phone.includes(search)) {
+            return true;
+          }
+        })
+      );
     }
+    setSearch("");
+  };
 
   return (
     <div className="flex flex-col md:flex-row flex-8/12 items-center gap-4 mb-6">

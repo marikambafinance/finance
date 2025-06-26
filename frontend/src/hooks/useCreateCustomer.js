@@ -18,7 +18,7 @@ export const useCreateCustomer = ()=>{
             return data;
         } catch (error) {
             setLoading(false)
-            console.log("Error submitting the form : ",error)
+            console.log("Error submitting the form : ",error.message)
         }  
     }
     
