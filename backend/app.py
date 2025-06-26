@@ -345,6 +345,29 @@ def update_repayment():
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}),500
     
+
+@app.route("/update_customer",methods=["POST"])
+def update_customer():
+    data = request.get_json(force=True)
+
+    # 1. Ensure 'hpNumber' is present
+    if "hpNumber" not in data:
+        return jsonify({"status": "error", "message": "hpNumber not present"}), 400
+
+    customer_id = data.pop("hpNumber")
+
+    # 2. If no other fields to update
+    if not data:
+        return jsonify({"status": "success", "message": "No fields to update"}), 200
+
+    # 3. Attempt update
+    result = collection.update_one({"hpNumber": customer_id}, {"$set": data})
+
+    if result.matched_count == 0:
+        return jsonify({"status": "error", "message": "Customer not found"}), 404
+
+    return jsonify({"status": "success", "message": "Record successfully updated"}), 200
+    
 @app.route("/")
 def home():
     return jsonify({"message": "API is running"})
