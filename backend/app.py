@@ -26,31 +26,31 @@ collection = db.customers
 
 BASE62_ALPHABET = string.digits + string.ascii_uppercase
 
-def int_to_base62(num):
-    if num == 0:
-        return BASE62_ALPHABET[0]
-    base62 = []
-    while num:
-        num, rem = divmod(num, 36)
-        base62.append(BASE62_ALPHABET[rem])
-    return ''.join(reversed(base62))
 
-def generate_secure_id(firstName, lastName,random_length=3):
-    # Take first letters uppercase
-    initials = (firstName[0] + lastName[0]).upper()
-    
-    # Get timestamp as YYMMDDHHMM
-    dt_str = datetime.now().strftime("%y%m%d%H%M")
-    dt_num = int(dt_str)
-    
-    # Encode timestamp to base62
-    encoded_dt = int_to_base62(dt_num)
-    
-    # Add random suffix for collision safety
-    suffix = ''.join(random.choices(BASE62_ALPHABET, k=random_length))
-    
-    # Combine all parts
-    return f"{initials}{encoded_dt}{suffix}"
+def generate_secure_id(firstName, lastName):
+    if not firstName or not lastName:
+        raise ValueError("First name and last name must not be empty.")
+
+    year_suffix = str(datetime.now().year)[-2:]
+    initials = firstName[0].upper() + lastName[0].upper()
+    prefix = f"MF{year_suffix}{initials}"
+
+    # Match any ID from the current year, regardless of initials
+    year_prefix = f"MF{year_suffix}"
+
+    last_entry = collection.find_one(
+        {"hpNumber": {"$regex": f"^{year_prefix}[A-Z]{{2}}\d{{5}}$"}},
+        sort=[("hpNumber", -1)]
+    )
+
+    if last_entry:
+        last_seq = int(last_entry["hpNumber"][-5:])
+        new_seq = last_seq + 1
+    else:
+        new_seq = 1
+
+    new_id = f"{prefix}{new_seq:05d}"
+    return new_id
 
 
 def is_duplicate_customer(hpNumber,aadhaarOrPan,  email=None, phone=None):
@@ -127,6 +127,23 @@ def insert_customer(customer_data):
         customer_data.pop("_id",None)
         return {"insert_id": str(result.inserted_id),"data":customer_data}
 
+def total_loan_payable(loanId):
+    pipeline = [
+                {"$match": {"loanId": loanId}},  # Filter by loanId
+                {"$group": {
+                    "_id": "$loanId",
+                    "total_payable": {"$sum": { "$toDouble": "$totalAmountDue" }}
+                }}
+            ]
+    result = list(db.repayments.aggregate(pipeline))
+    old_total = float(db.loans.find_one({"loanId":loanId},{"totalPayable":1})["totalPayable"])
+    new_total = round(float(result[0]["total_payable"]),1)
+    if new_total>old_total:
+        db.loans.update_one({"loanId":loanId},{"$set":{"totalPayable":str(new_total)}})
+        return str(new_total)
+    else:
+        return str(old_total)   
+
 
 def insert_loan_data(loan_data):
     #print(loan_data)
@@ -174,6 +191,21 @@ def get_all_customers():
     customers = list(collection.find())
     serialized_customers = [serialize_doc(doc) for doc in customers]
     return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+
+@app.route("/only_customer_and_loans",methods=["POST"])
+def get_all_customers_loans():
+    data = request.get_json(force=True)
+    if "hpNumber" in data.keys():
+        customers = list(collection.find({"hpNumber":data["hpNumber"]}))
+        serialized_customers = [serialize_doc(doc) for doc in customers]
+        for customer in serialized_customers:
+            loans = list(db.loans.find({"hpNumber":customer["hpNumber"]}))
+            serialized_loans = [serialize_doc(doc) for doc in loans]
+            customer["loans"]= serialized_loans
+        return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+    else:
+        return jsonify({"message":"missing hpNumber","status":"error"}),400
+
 
 @app.route("/loan", methods=["POST"])
 def submit_loan():
@@ -243,7 +275,7 @@ def get_repayment_info():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get_customer_loans_with_repayments', methods=['POST'])
+@app.route('/get_customer_loans', methods=['POST'])
 def get_loans_with_repayments():
     try:
         data = request.get_json(force=True)
@@ -262,12 +294,9 @@ def get_loans_with_repayments():
 
         result = []
         for loan in loans:
-            loan_id = loan["loanId"]
-            
-            repayments = list(db.repayments.find({"loanId": loan_id}))
-            repayments_serialized = [serialize(r) for r in repayments]
             loan_serialized = serialize(loan)
-            loan_serialized["repayments"] = repayments_serialized
+            total =total_loan_payable(loan["loanId"])
+            loan_serialized["totalPayable"]=total
             result.append(loan_serialized)
 
         return jsonify({
@@ -285,19 +314,29 @@ def update_repayment():
     required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","loanId","installmentNumber"}
     try:
         if required_keys.issubset(data):
-            result = collection.update_one({"loanId":data.get("loanId"),"installmentNumber":data.get("installmentNumber")}
-                                        ,{"$set":{
-                                            {"amountPaid":data.get("amountPaid"),
-                                                "status":data.get("status"),
-                                                "paymentDate":datetime.now(ZoneInfo("Asia/Kolkata")),
-                                                "paymentId":generate_unique_payment_id(),
-                                                "paymentMode":data.get("paymentMode"),
-                                                "recoveryAgent":data.get("recoveryAgent"),
-                                                "totalAmountDue":data.get("totalAmountDue"),
-                                                "amountPaid":data.get("amountPaid")
+            result = db.repayments.update_one( {
+                                                "loanId": data.get("loanId").strip(),
+                                                "installmentNumber": int(data.get("installmentNumber"))
+                                            },
+                                            {
+                                                "$set": {
+                                                    "amountPaid": data.get("amountPaid"),
+                                                    "status": data.get("status"),
+                                                    "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
+                                                    "paymentId": generate_unique_payment_id(),
+                                                    "paymentMode": data.get("paymentMode"),
+                                                    "recoveryAgent": data.get("recoveryAgent"),
+                                                    "totalAmountDue": data.get("totalAmountDue")
+                                                }
                                             }
-            }})
-            return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
+                                        )
+            if result.matched_count == 0:
+                return jsonify({"status":"error","message":"No document matched the query. Check loanId or installmentNumber."}),400
+            elif result.modified_count == 0:
+                return jsonify({"status":"error","message":"Document matched but no fields were updated (values may be the same)."}),400
+            else:
+                return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
+
         else:   
             missing = required_keys - data.keys()
             return jsonify({"status":"error","message":f"The following keys are missing: {missing}"}),404
@@ -305,6 +344,29 @@ def update_repayment():
         
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}),500
+    
+
+@app.route("/update_customer",methods=["POST"])
+def update_customer():
+    data = request.get_json(force=True)
+
+    # 1. Ensure 'hpNumber' is present
+    if "hpNumber" not in data:
+        return jsonify({"status": "error", "message": "hpNumber not present"}), 400
+
+    customer_id = data.pop("hpNumber")
+
+    # 2. If no other fields to update
+    if not data:
+        return jsonify({"status": "success", "message": "No fields to update"}), 200
+
+    # 3. Attempt update
+    result = collection.update_one({"hpNumber": customer_id}, {"$set": data})
+
+    if result.matched_count == 0:
+        return jsonify({"status": "error", "message": "Customer not found"}), 404
+
+    return jsonify({"status": "success", "message": "Record successfully updated"}), 200
     
 @app.route("/")
 def home():
