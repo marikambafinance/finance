@@ -223,7 +223,7 @@ def submit_data():
 
 @app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
-    limit = 4
+    limit = 10
     query = {}
     prev_id = request.args.get("prev_id")
     next_id = request.args.get("next_id")  # for forward paging
