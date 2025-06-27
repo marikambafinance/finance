@@ -174,13 +174,15 @@ def global_auth_check():
     exempt_routes = ['home']
     if request.endpoint in exempt_routes:
         return
+    if request.method == "OPTIONS":
+        return '', 200
     api_key = request.headers.get('x-api-key')
     if api_key:
         api_key = hashlib.sha256(api_key.encode()).hexdigest()
     if not api_key or api_key != EXPECTED_API_KEY:
         return jsonify({'message': 'Unauthorized'}), 401
 
-@app.route('/submit', methods=['POST'])
+@app.route('/submit', methods=['POST',"OPTIONS"])
 def submit_data():
     try:
         data = request.get_json(force=True)
@@ -196,13 +198,13 @@ def submit_data():
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/customers", methods=["GET"])
+@app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
     customers = list(collection.find())
     serialized_customers = [serialize_doc(doc) for doc in customers]
     return jsonify({"customers_data":serialized_customers,"status":"success"}),200
 
-@app.route("/only_customer_and_loans",methods=["POST"])
+@app.route("/only_customer_and_loans",methods=["POST","OPTIONS"])
 def get_all_customers_loans():
     data = request.get_json(force=True)
     if "hpNumber" in data.keys():
@@ -217,7 +219,7 @@ def get_all_customers_loans():
         return jsonify({"message":"missing hpNumber","status":"error"}),400
 
 
-@app.route("/loan", methods=["POST"])
+@app.route("/loan", methods=["POST","OPTIONS"])
 def submit_loan():
     try:
         data = request.get_json(force=True)
@@ -236,7 +238,7 @@ def submit_loan():
         traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
     
-@app.route('/get_customer_loan_info', methods=['POST'])
+@app.route('/get_customer_loan_info', methods=['POST',"OPTIONS"])
 def get_customer_loans():
     data = request.get_json(force=True)
     
@@ -270,7 +272,7 @@ def get_customer_loans():
     return jsonify({"status":"Success","response":convert_objectids(result)})
     
 
-@app.route('/get_customer_repayment_info', methods=['POST'])
+@app.route('/get_customer_repayment_info', methods=['POST',"OPTIONS"])
 def get_repayment_info():
     data = request.get_json(force=True)
     
@@ -285,7 +287,7 @@ def get_repayment_info():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get_customer_loans', methods=['POST'])
+@app.route('/get_customer_loans', methods=['POST',"OPTIONS"])
 def get_loans_with_repayments():
     try:
         data = request.get_json(force=True)
@@ -318,7 +320,7 @@ def get_loans_with_repayments():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     
-@app.route("/update_repayment",methods=["POST"])
+@app.route("/update_repayment",methods=["POST","OPTIONS"])
 def update_repayment():
     data = request.get_json(force=True)
     required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","loanId","installmentNumber"}
@@ -356,7 +358,7 @@ def update_repayment():
         return jsonify({"status":"error","message":str(e)}),500
     
 
-@app.route("/update_customer",methods=["POST"])
+@app.route("/update_customer",methods=["POST","OPTIONS"])
 def update_customer():
     data = request.get_json(force=True)
 
