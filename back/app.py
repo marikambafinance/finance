@@ -17,11 +17,12 @@ from dateutil.relativedelta import relativedelta
 import smtplib
 from email.mime.text import MIMEText
 import hashlib
-
+from dotenv import load_dotenv
 
 
 app = Flask(__name__)
 CORS(app)
+load_dotenv()
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 EMAIL_USERNAME = "marikambafinance@gmail.com"
