@@ -14,12 +14,12 @@ from twilio.rest import Client
 import time
 import pymongo
 import hashlib
-
+from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
-
+load_dotenv()
 mongo_uri=os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
 db = client.users
