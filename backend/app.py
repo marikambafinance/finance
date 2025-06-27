@@ -182,6 +182,29 @@ def global_auth_check():
     if not api_key or api_key != EXPECTED_API_KEY:
         return jsonify({'message': 'Unauthorized'}), 401
 
+@app.route("/search",methods=["POST","OPTIONS"])
+def search():
+    data = request.get_json(force=True)
+    query = {
+        key : {"$regex":value,"$options":"i"}
+        for key,value in data.items()
+        if value
+     }
+    result = list(collection.find(query,{
+        "_id": 0,
+        "hpNumber": 1,
+        "phone": 1,
+        "aadhaarOrPan": 1,
+        "annualIncome": 1,
+        "firstName": 1,
+        "lastName": 1
+    }))
+
+    if result:    
+        return jsonify({"status":"success","search_reponse":result}),200
+    else:
+        return jsonify({"status": "no_match", "search_response": "No records found"}), 404
+
 @app.route('/submit', methods=['POST',"OPTIONS"])
 def submit_data():
     try:
