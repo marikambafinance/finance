@@ -38,6 +38,7 @@ const RepaymentCard = ({ repayment, onUpdateSuccess }) => {
       {
         method: "POST",
         headers: {
+          'x-api-key': 'marikambafinance@123',
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),

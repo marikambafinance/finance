@@ -11,15 +11,19 @@ export const useCustomersList = () => {
   const getCustomersList = async () => {
     try {
       const res = await fetch(
-        "https://mariamma-finance.onrender.com/customers"
+        "https://mariamma-finance.onrender.com/customers",{
+          headers: {
+            "x-api-key": "marikambafinance@123",
+          }
+        }
       );
       const result = await res.json();
-      setCustomers(result?.customers_data);
-      customerList = result?.customers_data;
+      setCustomers(result);
+      customerList = result;
       setError(null);
     } catch (err) {
       setError(err.message);
-      setData(null);
+      setCustomers(null);
     } finally {
       setLoading(false);
     }

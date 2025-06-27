@@ -9,6 +9,7 @@ const useRepayment = ()=>{
         const res = await fetch("https://mariamma-finance.onrender.com/get_customer_loans_with_repayments",{
             method: 'POST',
             headers: {
+                'x-api-key': 'marikambafinance@123',
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({hpNumber})

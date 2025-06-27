@@ -4,6 +4,7 @@ import {
   Phone,
   User,
   Bike,
+  Users,
   Calendar,
   Landmark,
   MapPin,
@@ -14,19 +15,23 @@ import {
   Edit3,
   Save,
   Watch,
+  Loader,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import Navbar from "../components/Navbar";
 import useCustomerDetails from "../hooks/useCustomerDetails";
 import { useLocation } from "react-router-dom";
 import EditableFieldWithIcon from "../components/EditableFieldWithIcon";
+import useCustomerUpdate from "../hooks/useCustomerUpdate";
 
 const CustomerDetails = () => {
   const location = useLocation();
+  const { updateCustomerData } = useCustomerUpdate();
   const { hpNumber } = location?.state || {};
-  const { custDetails } = useCustomerDetails(hpNumber);
+  const { custDetails, getCustomerDetails } = useCustomerDetails(hpNumber);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleCancel = () => {
     reset(custDetails);
@@ -39,7 +44,11 @@ const CustomerDetails = () => {
     reset,
     watch,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      firstName: custDetails?.firstName,
+    },
+  });
 
   const editableFieldInfo = [
     {
@@ -53,6 +62,30 @@ const CustomerDetails = () => {
       label: "Last Name",
       icon: <User />,
       value: watch("lastName"),
+    },
+    {
+      name: "gender",
+      label: "Gender",
+      icon: <Heart />,
+      value: watch("gender"),
+      type: "select",
+      options: [
+        { label: "Male", value: "Male" },
+        { label: "Female", value: "Female" },
+        { label: "Other", value: "Other" },
+      ],
+    },
+    {
+      name: "maritalStatus",
+      label: "Marital Status",
+      icon: <Users />,
+      value: watch("maritalStatus"),
+      type: "select",
+      options: [
+        { label: "Single", value: "Single" },
+        { label: "Married", value: "Married" },
+        { label: "Divorced", value: "Divorced" },
+      ],
     },
     {
       name: "aadhaarOrPan",
@@ -81,16 +114,15 @@ const CustomerDetails = () => {
     {
       name: "chasisNumber",
       label: "Chasis Number",
-      icon: <MapPin />,
+      icon: <Bike />,
       value: watch("chasisNumber"),
-      type: "number"
     },
     {
       name: "phone",
       label: "Phone Number",
       icon: <Phone />,
       value: watch("phone"),
-      type: "number"
+      type: "number",
     },
     {
       name: "vehicleNumber",
@@ -104,6 +136,34 @@ const CustomerDetails = () => {
       icon: <Briefcase />,
       value: watch("occupation"),
     },
+    {
+      name: "dob",
+      label: "Date of Birth",
+      icon: <Heart />,
+      value: watch("dob"),
+      type: "date",
+    },
+    {
+      name: "employment",
+      label: "Employment Status",
+      icon: <Briefcase />,
+      value: watch("employment"),
+      type: "select",
+      options: [
+        { label: "Employed", value: "Employed" },
+        { label: "Unemployed", value: "Unemployed" },
+        { label: "Self-Employed", value: "Self-Employed" },
+        { label: "Student", value: "Student" },
+        { label: "Retired", value: "Retired" },
+      ],
+    },
+    {
+      name: "annualIncome",
+      label: "Annual Income",
+      icon: <DollarSign />,
+      value: parseFloat(watch("annualIncome")).toLocaleString("en-IN"),
+      type: "number",
+    },
   ];
 
   useEffect(() => {
@@ -112,10 +172,15 @@ const CustomerDetails = () => {
     }
   }, [custDetails]);
 
-  const onSubmit = (data) => {
-    console.log(data)
-    reset(custDetails)
+  const onSubmit = async (data) => {
+    const { loans, _id, ...rest } = data;
+    setLoading(true);
+    const res = await updateCustomerData(rest);
+    console.log(rest);
+    await getCustomerDetails();
+    setLoading(false);
     setIsEditing(false);
+    reset(custDetails);
   };
 
   return (
@@ -160,8 +225,12 @@ const CustomerDetails = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 text-lg">
-              {editableFieldInfo?.map(({ name, value, icon, label, type }) => (
+          {loading ? (
+            <Loader />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 text-lg">
+              {editableFieldInfo?.map(
+                ({ name, value, icon, label, type, options }) => (
                   <EditableFieldWithIcon
                     key={name}
                     name={name}
@@ -171,9 +240,12 @@ const CustomerDetails = () => {
                     register={register}
                     isEditing={isEditing}
                     type={type}
+                    options={options}
                   />
-              ))}
-          </div>
+                )
+              )}
+            </div>
+          )}
 
           <div>
             <h2 className="text-3xl font-semibold text-cyan-300 mb-4 border-b border-gray-700 pb-2">

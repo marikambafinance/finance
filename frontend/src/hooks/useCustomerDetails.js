@@ -7,6 +7,7 @@ const useCustomerDetails = (hpNumber)=>{
         const res = await fetch("https://mariamma-finance.onrender.com/only_customer_and_loans",{
             method: "POST",
             headers: {
+                'x-api-key': 'marikambafinance@123',
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({hpNumber})
@@ -20,7 +21,7 @@ const useCustomerDetails = (hpNumber)=>{
         }
     },[]);
 
-    return {custDetails}
+    return {custDetails, getCustomerDetails}
 
 }
 

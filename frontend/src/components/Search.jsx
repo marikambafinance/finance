@@ -2,41 +2,54 @@ import React, { useState } from "react";
 import { useCustomers } from "../context/CustomersContext";
 import { useCustomersList } from "../hooks/useCustomersList";
 
-const Search = () => {
+const Search = ({setLoading}) => {
   const { customers, setCustomers } = useCustomers();
   const [search, setSearch] = useState("");
-  const {customerList} = useCustomersList();
+  const [searchKey, setSearchKey] = useState("");
+  const { customerList } = useCustomersList();
 
-  const handleSearch = () => {
-    if (customers) {
-      if(!search){
+  const handleSearch = async () => {
+    try {
+      if (!search || !searchKey) {
         setCustomers(customerList);
         return;
       }
-      setCustomers(
-        customers.filter((item) => {
-          if (item?.hpNumber.includes(search)) {
-            return true;
-          } else if (
-            item.firstName.toLowerCase().includes(search.toLowerCase())
-          ) {
-            console.log(item.firstName.toLowerCase());
-            return true;
-          } else if (
-            item.lastName.toLowerCase().includes(search.toLowerCase())
-          ) {
-            return true;
-          } else if (item.phone.includes(search)) {
-            return true;
-          }
-        })
-      );
+      setLoading(true)
+      let data = { [searchKey]: search };
+      const res = await fetch("https://mariamma-finance.onrender.com/search", {
+        method: "POST",
+        headers: {
+          "x-api-key": "marikambafinance@123",
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      setLoading(false)
+      setCustomers({ customers: result?.search_reponse });
+      setSearch("");
+    } catch (error) {
+      console.log(error.message);
     }
-    setSearch("");
   };
 
   return (
     <div className="flex flex-col md:flex-row flex-8/12 items-center gap-4 mb-6">
+      <div className="flex flex-col gap-1 -mt-6">
+        <label>Search By </label>
+        <select
+          value={searchKey}
+          onChange={(e) => setSearchKey(e.target.value)}
+          className="w-full p-2 rounded bg-gray-700 text-white"
+        >
+          <option value="" disabled hidden>
+            Select
+          </option>
+          <option value="firstName">Firstname</option>
+          <option value="lastName">Lastname</option>
+          <option value="phone">Phone Number</option>
+          <option value="hpNumber">HP Number</option>
+        </select>
+      </div>
       <input
         type="text"
         placeholder="Search by name, email, phone or Aadhaar"

@@ -38,7 +38,7 @@ const Home = () => {
         </main>
 
         <footer className="absolute bottom-4 text-sm text-gray-500">
-          © 2025 Mariamma Finance Pvt Ltd. All rights reserved.
+          © 2025 Maarikamba Finance Pvt Ltd. All rights reserved.
         </footer>
       </div>
   );

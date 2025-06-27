@@ -55,6 +55,7 @@ const CreateLoanPage = () => {
     const res = await fetch("https://mariamma-finance.onrender.com/loan",{
       method: "POST",
       headers: {
+        'x-api-key': 'marikambafinance@123',
         "Content-Type": "application/json"
       },
       body: JSON.stringify(data)

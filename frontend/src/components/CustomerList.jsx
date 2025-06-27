@@ -4,17 +4,49 @@ import Search from "./Search";
 import Loader from "./Loader";
 import { useCustomersList } from "../hooks/useCustomersList";
 import { useCustomers } from "../context/CustomersContext";
+import { useNavigate } from "react-router-dom";
 
 const CustomerList = () => {
   const { loading, error, setLoading, getCustomersList } = useCustomersList();
-  const {customers} = useCustomers();
+  const { customers, setCustomers } = useCustomers();
+  const navigate = useNavigate();
   console.log(customers);
 
-  const handleRefresh = async ()=>{
+  const handleRefresh = async () => {
     setLoading(true);
     await getCustomersList();
-    setLoading(false)
-  }
+    setLoading(false);
+  };
+
+  const handleNext = async () => {
+    if(!customers?.next_id) return;
+    navigate(`?next_id=${customers?.next_id}`)
+    console.log(customers?.next_id)
+    const res = await fetch(`https://mariamma-finance.onrender.com/customers?next_id=${customers?.next_id}`,{
+        headers: {
+          "x-api-key": "marikambafinance@123",
+        },
+      }
+    );
+    const data = await res.json();
+    setCustomers(data);
+    console.log(data)
+  };
+
+  const handlePrev = async () => {
+    if(!customers?.prev_id) return;
+    navigate(`?prev_id=${customers?.prev_id}`)
+    console.log(customers?.prev_id)
+    const res = await fetch(`https://mariamma-finance.onrender.com/customers?prev_id=${customers?.prev_id}`,{
+        headers: {
+          "x-api-key": "marikambafinance@123",
+        },
+      }
+    );
+    const data = await res.json();
+    setCustomers(data);
+    console.log(data)
+  };
 
   return (
     <div className="bg-gradient-to-b w-full max-w-6xl from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
@@ -22,14 +54,14 @@ const CustomerList = () => {
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-teal-300">Customers List</h2>
         </div>
-        <div className="flex justify-between">
-            <Search />
-            <button
+        <div className="flex justify-center items-center">
+          <Search setLoading={setLoading}/>
+          <button
             onClick={handleRefresh}
             className="bg-teal-500 hover:bg-teal-600 mb-6 text-white px-6 py-2 rounded-full shadow"
-            >
+          >
             Refresh
-            </button>
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -49,12 +81,9 @@ const CustomerList = () => {
               <div className="text-red-400 mt-4 text-center">
                 Failed to load customers: {error}
               </div>
-            ) : customers?.length > 0 ? (
-              customers.map((customer) => (
-                <CustomerDataCard
-                  key={customer.hpNumber}
-                  customer={customer}
-                />
+            ) : customers?.customers?.length > 0 ? (
+              customers?.customers?.map((customer) => (
+                <CustomerDataCard key={customer.hpNumber} customer={customer} />
               ))
             ) : (
               <div className="text-gray-400 mt-4 text-center">
@@ -64,6 +93,23 @@ const CustomerList = () => {
           </div>
         </div>
       </main>
+      <div className="flex justify-center items-center gap-4 mt-4">
+        <button
+          disabled={customers?.prev_id === null}
+          onClick={handlePrev}
+          className={`px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 ${customers?.prev_id ? "" : "cursor-not-allowed"}`}
+        >
+          Prev
+        </button>
+
+        <button
+          disabled={customers?.next_id === null}
+          onClick={handleNext}
+          className={`px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-500 disabled:opacity-50 ${customers?.next_id ? "" : "cursor-not-allowed"}`}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 };
