@@ -223,7 +223,7 @@ def submit_data():
 
 @app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
-    limit = 25
+    limit = 4
     last_id = request.args.get("last_id")  # string or None
 
     query = {}
