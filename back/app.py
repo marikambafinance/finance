@@ -14,22 +14,68 @@ from twilio.rest import Client
 import time
 import pymongo
 from dateutil.relativedelta import relativedelta
+import smtplib
+from email.mime.text import MIMEText
+import hashlib
 
 
 
 app = Flask(__name__)
 CORS(app)
-account_sid = 'your_account_sid'  # Find in Twilio Console
-auth_token = 'your_auth_token'    # Find in Twilio Console
-twilio_whatsapp_number = 'whatsapp:+14155238886'
-Client = Client(account_sid, auth_token)
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+EMAIL_USERNAME = "marikambafinance@gmail.com"
+EMAIL_PASSWORD = "Marikamba@0615"
 mongo_uri = os.getenv("MONGO_URI")
+EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
 
 client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
 
 
+def send_due_soon_emails(records):
+    """
+    records: List of dicts with keys: name, email, due_date (YYYY-MM-DD)
+    Sends an email if due date is within 3 days from today.
+    """
+    today = datetime.today().date()   
+    threshold_date = today + timedelta(days=3)
+
+    for record in records:
+        name = record.get("name")
+        email = record.get("email")
+        due_date_str = record.get("dueDate")
+
+        if not email or not due_date_str:
+            continue
+
+        try:
+            due_date = due_date_str.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+            due_date = due_date.date()
+            print(due_date)
+
+            if today <= due_date <= threshold_date:
+                # Send email
+                subject = "Payment Due Reminder"
+                body = f"Dear {name},\n\nThis is a reminder that your payment is due on {due_date}. Please ensure timely payment to avoid penalties.\n\nRegards,\nBilling Team"
+
+                msg = MIMEText(body)
+                msg["Subject"] = subject
+                msg["From"] = EMAIL_USERNAME
+                msg["To"] = email
+
+                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                    server.sendmail(EMAIL_USERNAME, email, msg.as_string())
+
+                return {"mesage":f"Sent email to {name} at {email}"}
+            
+            return {"message":"No emails sent"}
+
+        except Exception as e:
+            print(f"Error processing record for {email}: {e}")
 
 def calculate_penalty(start_date, end_date, monthly_penalty=300):
     if end_date < start_date:
@@ -75,60 +121,38 @@ def calculate_months_overdue(due_date, current_date,GRACE_PERIOD_DAYS):
         total_months -= 1
     return max(0, total_months)
 
-@app.route("/remainder_whatsapp", methods=['GET'])
-def remainder():
-    remainder = db.repayments
-    now_ist = datetime.now()
-    three_days_later = now_ist + timedelta(days=3)
+@app.before_request
+def global_auth_check():
+    exempt_routes = ['home']
+    if request.endpoint in exempt_routes:
+        return
+    api_key = request.headers.get('x-api-key')
+    if api_key:
+        api_key = hashlib.sha256(api_key.encode()).hexdigest()
+    if not api_key or api_key != EXPECTED_API_KEY:
+        return jsonify({'message': 'Unauthorized'}), 401
 
-    # Query repayments due in next 3 days and not paid
-    repayments = remainder.find({
-        "status": {"$ne": "paid"},
-        "$or": [
-        {"dueDate": {"$gte": now_ist, "$lte": three_days_later}},
-        {"dueDate": {"$lt": now_ist}}
-    ]
-    })
-    for repayment in repayments:
-        customer_id = repayment.get("hpNumber")
-        if not customer_id:
-            continue
-        user = collection.find_one({"hpNumber": customer_id})
-        if not user:
-            continue
-        name = user.get("firstName") + " " + user.get("lastName")
-        phone = "+91"+str(user.get("phone"))  # Must be in +91XXXXXXXXXX format
-        if not phone:
-            continue
-        amount = repayment.get("totalAmountDue", 0)
-        due_date = repayment.get("dueDate")+timedelta(hours=5,minutes=30)
-        due_date_str = due_date.strftime("%d-%b-%Y")
-        message = (
-            f"Hi {name},\n\n"
-            f"This is a reminder that your loan repayment of ₹{amount} is due on {due_date_str}.\n"
-            "Please pay before the due date to avoid penalties.\n\nThank you!"
-        )
-        try:
-            # Schedule message 2 minutes from now (local time)
-            now_local = datetime.now(ZoneInfo("Asia/Kolkata"))
-            send_hour = now_local.hour
-            send_minute = now_local.minute + 2
+@app.route("/send_remainder_email",methods=["GET"])
+def send_remainder():
+    today = datetime.now()
+    threshold_date = today +timedelta(days=3)
+    data = list(db.repayments.find({
+            "dueDate": {
+                "$gte": today,
+                "$lte": threshold_date
+            },
+            "status": { "$ne": "paid" }  # not equal to 'paid'
+        },{"hpNumber":1,"dueDate":1,"_id":0}))
 
-            if send_minute >= 60:
-                send_minute -= 60
-                send_hour = (send_hour + 1) % 24
-
-            print(f"Scheduling message to {phone} at {send_hour}:{send_minute}")
-            mess = client.messages.create(
-                body=message,
-                from_=twilio_whatsapp_number,
-                to=f'whatsapp:{phone}'  # Replace with recipient's number
-            )
-            #kit.sendwhatmsg(phone, message, send_hour, send_minute)
-            #time.sleep(2)  # wait to avoid too many rapid opens
-        except Exception as e:
-            return jsonify({f"Error sending message to {phone}": f"{e}"}),400
-    return jsonify({"status": "success","message":"Remainder messagges sent"}),200
+    for details in data:
+        result  = db.customers.find_one({"hpNumber":details["hpNumber"]},{"firstName":1,"lastName":1,"email":1,"_id":0})
+        details["name"],details["email"] = result["firstName"] +" " + result["lastName"], result["email"]
+    
+    print(data)
+    if data:
+        return jsonify(send_due_soon_emails(data))
+         
+    return jsonify({"messages":"No emails were sent"}),200
 
 
 @app.route("/")
