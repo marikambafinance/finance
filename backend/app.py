@@ -14,12 +14,12 @@ from twilio.rest import Client
 import time
 import pymongo
 import hashlib
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
-load_dotenv()
+#load_dotenv()
 mongo_uri=os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
 db = client.users
@@ -200,7 +200,7 @@ def submit_data():
 
 @app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
-    customers = list(collection.find())
+    customers = list(collection.find({},{"hpNumber":1,"phone":1,"aadhaarOrPan":1,"annualIncome":1,"firstName":1,"lastName":1}))
     serialized_customers = [serialize_doc(doc) for doc in customers]
     return jsonify({"customers_data":serialized_customers,"status":"success"}),200
 
