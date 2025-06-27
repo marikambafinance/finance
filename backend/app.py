@@ -224,46 +224,65 @@ def submit_data():
 @app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
     limit = 4
-    last_id = request.args.get("last_id")  # string or None
-
     query = {}
-    if last_id:
-        try:
-            query["_id"] = {"$gt": ObjectId(last_id)}
-        except Exception:
-            return jsonify({"error": "Invalid last_id"}), 400
+    prev_id = request.args.get("prev_id")
+    next_id = request.args.get("next_id")  # for forward paging
 
-    cursor = collection.find(query, {
-        "_id": 1,
-        "hpNumber": 1,
-        "phone": 1,
-        "aadhaarOrPan": 1,
-        "annualIncome": 1,
-        "firstName": 1,
-        "lastName": 1
-    }).sort("_id", 1).limit(limit)
+    if prev_id:
+        query["_id"] = { "$lt": ObjectId(prev_id) }
+        cursor = collection.find(query,{
+                "_id": 1,
+                "hpNumber": 1,
+                "phone": 1,
+                "aadhaarOrPan": 1,
+                "annualIncome": 1,
+                "firstName": 1,
+                "lastName": 1
+            }).sort("_id", -1).limit(limit)
+        results = list(cursor)[::-1]  # reverse back to normal order
 
-    customers = list(cursor)
+    elif next_id:
+        query["_id"] = { "$gt": ObjectId(next_id) }
+        results = list(collection.find(query,{
+                    "_id": 1,
+                    "hpNumber": 1,
+                    "phone": 1,
+                    "aadhaarOrPan": 1,
+                    "annualIncome": 1,
+                    "firstName": 1,
+                    "lastName": 1
+                }).limit(limit))
 
-    # To help client paginate, send back the last _id in this batch
-    if customers:
-        new_last_id = str(customers[-1]["_id"])
     else:
-        new_last_id = None
-
-    # Convert ObjectId to str for JSON serialization
-    for c in customers:
-        c["_id"] = str(c["_id"])
+        results = list(collection.find({},{
+                    "_id": 1,
+                    "hpNumber": 1,
+                    "phone": 1,
+                    "aadhaarOrPan": 1,
+                    "annualIncome": 1,
+                    "firstName": 1,
+                    "lastName": 1
+                }).limit(limit))
     
-    if customers:
-        return jsonify({
-            "status":"sucess",
-            "customers": customers,
-            "last_id": new_last_id,
-            "limit": limit
-        }),200
-    else:
-        return jsonify({"status":"success","message":"No records found"}),200
+    has_prev = (
+        collection.find_one({"_id": {"$lt": results[0]["_id"]}})
+        if results else False
+    )
+
+    # Check if next page exists
+    has_next = (
+        collection.find_one({"_id": {"$gt": results[-1]["_id"]}})
+        if results else False
+    )
+
+    for res in results:
+            res["_id"]=str(res["_id"])
+
+    return jsonify({
+        "customers": results,
+        "prev_id": str(results[0]["_id"]) if has_prev else None,
+        "next_id": str(results[-1]["_id"]) if has_next else None
+    }),200
 
 @app.route("/only_customer_and_loans",methods=["POST","OPTIONS"])
 def get_all_customers_loans():
