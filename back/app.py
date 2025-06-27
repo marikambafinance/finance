@@ -127,13 +127,15 @@ def global_auth_check():
     exempt_routes = ['home']
     if request.endpoint in exempt_routes:
         return
+    if request.method == "OPTIONS":
+        return '', 200
     api_key = request.headers.get('x-api-key')
     if api_key:
         api_key = hashlib.sha256(api_key.encode()).hexdigest()
     if not api_key or api_key != EXPECTED_API_KEY:
         return jsonify({'message': 'Unauthorized'}), 401
 
-@app.route("/send_remainder_email",methods=["GET"])
+@app.route("/send_remainder_email",methods=["GET","OPTIONS"])
 def send_remainder():
     today = datetime.now()
     threshold_date = today +timedelta(days=3)
@@ -161,7 +163,7 @@ def home():
     return jsonify({"message": "API is running"})
 
 
-@app.route("/update_penalty_new", methods=['GET'])
+@app.route("/update_penalty_new", methods=['GET',"OPTIONS"])
 def apply_monthly_penalties_new(): 
     PENALTY_PER_MONTH = 300
     GRACE_PERIOD_DAYS = 5
