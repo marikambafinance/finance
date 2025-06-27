@@ -200,9 +200,47 @@ def submit_data():
 
 @app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
-    customers = list(collection.find({},{"hpNumber":1,"phone":1,"aadhaarOrPan":1,"annualIncome":1,"firstName":1,"lastName":1}))
-    serialized_customers = [serialize_doc(doc) for doc in customers]
-    return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+    limit = 25
+    last_id = request.args.get("last_id")  # string or None
+
+    query = {}
+    if last_id:
+        try:
+            query["_id"] = {"$gt": ObjectId(last_id)}
+        except Exception:
+            return jsonify({"error": "Invalid last_id"}), 400
+
+    cursor = collection.find(query, {
+        "_id": 1,
+        "hpNumber": 1,
+        "phone": 1,
+        "aadhaarOrPan": 1,
+        "annualIncome": 1,
+        "firstName": 1,
+        "lastName": 1
+    }).sort("_id", 1).limit(limit)
+
+    customers = list(cursor)
+
+    # To help client paginate, send back the last _id in this batch
+    if customers:
+        new_last_id = str(customers[-1]["_id"])
+    else:
+        new_last_id = None
+
+    # Convert ObjectId to str for JSON serialization
+    for c in customers:
+        c["_id"] = str(c["_id"])
+    
+    if customers:
+        return jsonify({
+            "status":"sucess",
+            "customers": customers,
+            "last_id": new_last_id,
+            "limit": limit
+        }),200
+    else:
+        return jsonify({"status":"success","message":"No records found"}),200
 
 @app.route("/only_customer_and_loans",methods=["POST","OPTIONS"])
 def get_all_customers_loans():
