@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from twilio.rest import Client
 import time
 import pymongo
+import hashlib
 
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -23,7 +24,7 @@ mongo_uri=os.getenv("MONGO_URI")
 client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
-
+EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
 BASE62_ALPHABET = string.digits + string.ascii_uppercase
 
 
@@ -168,7 +169,16 @@ def serialize_doc(doc):
     doc["_id"] = str(doc["_id"])
     return doc
 
-
+@app.before_request
+def global_auth_check():
+    exempt_routes = ['home']
+    if request.endpoint in exempt_routes:
+        return
+    api_key = request.headers.get('x-api-key')
+    if api_key:
+        api_key = hashlib.sha256(api_key.encode()).hexdigest()
+    if not api_key or api_key != EXPECTED_API_KEY:
+        return jsonify({'message': 'Unauthorized'}), 401
 
 @app.route('/submit', methods=['POST'])
 def submit_data():
