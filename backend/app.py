@@ -41,7 +41,7 @@ def generate_secure_id(firstName, lastName):
 
     last_entry = collection.find_one(
         {"hpNumber": {"$regex": f"^{year_prefix}[A-Z]{{2}}\d{{5}}$"}},
-        sort=[("hpNumber", -1)]
+        sort=[("_id", -1)]
     )
 
     if last_entry:
