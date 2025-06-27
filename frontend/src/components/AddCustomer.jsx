@@ -5,9 +5,9 @@ import Popup from "./Popup";
 import { usePopupContext } from "../context/PopupContext";
 
 const AddCustomer = () => {
-    const {createCustomer, loading, setLoading} = useCreateCustomer();
-    const {showPopup, setShowPopup, setType} = usePopupContext();
-    
+  const { createCustomer, loading, setLoading } = useCreateCustomer();
+  const { showPopup, setShowPopup, setType, setMessage } = usePopupContext();
+
   const {
     register,
     handleSubmit,
@@ -17,22 +17,37 @@ const AddCustomer = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    const res = await createCustomer(data);
-    setType(res?.status);
-    setLoading(false);
-    setShowPopup(true);
-    console.log(res);
-    reset();
+
+    try {
+      const res = await createCustomer(data);
+
+      if (!res?.status || res.status !== "success") {
+        throw new Error(res?.message || "Failed to create customer");
+      }
+
+      setType("success");
+      setMessage("Customer created successfully!");
+      setShowPopup(true);
+      reset();
+    } catch (error) {
+      setType("error");
+      setMessage(error.message || "Something went wrong during submission.");
+      setShowPopup(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if(loading) return <Loader />
+  if (loading) return <Loader />;
 
-
-  return showPopup ? <Popup title="Customer created successfully"/> : (
+  return (
     <div className="bg-gradient-to-b w-full max-w-6xl from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
       <main className="w-full max-w-6xl bg-gray-800 rounded-lg shadow-lg p-8 mt-10">
+        <Popup />
         <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold text-teal-300">Register a Customer</h2>
+          <h2 className="text-3xl font-bold text-teal-300">
+            Register a Customer
+          </h2>
         </div>
 
         <form
@@ -145,7 +160,7 @@ const AddCustomer = () => {
             <label className="block mb-1">Zip Code</label>
             <input
               type="text"
-              {...register("zip", {required: "Zip code is required"})}
+              {...register("zip", { required: "Zip code is required" })}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
             {errors.zip && (
@@ -157,11 +172,15 @@ const AddCustomer = () => {
             <label className="block mb-1">Aadhaar / PAN</label>
             <input
               type="text"
-              {...register("aadhaarOrPan", {required: "Aadhaar/PAN is required"})}
+              {...register("aadhaarOrPan", {
+                required: "Aadhaar/PAN is required",
+              })}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
             {errors.aadhaar_pan && (
-              <p className="text-red-400 text-sm">{errors.aadhaar_pan.message}</p>
+              <p className="text-red-400 text-sm">
+                {errors.aadhaar_pan.message}
+              </p>
             )}
           </div>
 

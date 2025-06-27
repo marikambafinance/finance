@@ -5,8 +5,7 @@ import Popup from "./Popup";
 import Loader from "./Loader";
 
 const CreateLoanPage = () => {
-
-  const {showPopup, setShowPopup, setType} = usePopupContext();
+  const { showPopup, setShowPopup, setType, setMessage } = usePopupContext();
   const [loading, setLoading] = useState(false);
 
   const {
@@ -52,26 +51,40 @@ const CreateLoanPage = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    const res = await fetch("https://mariamma-finance.onrender.com/loan",{
-      method: "POST",
-      headers: {
-        'x-api-key': 'marikambafinance@123',
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    })
-    const result = await res.json();
-    setType(result.status);
-    console.log("Loan Submitted:", result);
-    setLoading(false);
-    setShowPopup(true);
-    reset();
-    // Submit logic here
+
+    try {
+      const res = await fetch("https://mariamma-finance.onrender.com/loan", {
+        method: "POST",
+        headers: {
+          "x-api-key": "marikambafinance@123",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (!result?.status || result.status !== "success") {
+        throw new Error(result?.message || "Loan creation failed.");
+      }
+
+      setType("success");
+      setMessage("Loan created successfully!");
+      reset();
+    } catch (err) {
+      setType("error");
+      setMessage(
+        err.message || "Something went wrong while creating the loan."
+      );
+    } finally {
+      setLoading(false);
+      setShowPopup(true);
+    }
   };
 
-  if(loading) return <Loader />
+  if (loading) return <Loader />;
 
-  return showPopup ? <Popup title="Loan created successfully"/> : (
+  return (
     <div className="bg-gradient-to-b w-full max-w-6xl from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
       <main className="w-full max-w-6xl bg-gray-800 rounded-lg shadow-lg p-8 mt-10">
         <div className="text-center mb-6">
@@ -121,7 +134,9 @@ const CreateLoanPage = () => {
           </div>
 
           <div>
-            <label className="block mb-1">Interest Rate: {watch("interestRate")}%</label>
+            <label className="block mb-1">
+              Interest Rate: {watch("interestRate")}%
+            </label>
             <input
               type="range"
               min="0"
@@ -153,38 +168,40 @@ const CreateLoanPage = () => {
             )}
           </div>
 
-            <div>
-              <label className="block mb-1">Interest Amount</label>
-              <input
-                type="text"
-                readOnly
-                value={watch("interestAmount") ? `₹${watch("interestAmount")}` : ""}
-                placeholder="Interest Amount"
-                className="p-2 rounded bg-gray-700 w-full"
-              />
-            </div>
+          <div>
+            <label className="block mb-1">Interest Amount</label>
+            <input
+              type="text"
+              readOnly
+              value={
+                watch("interestAmount") ? `₹${watch("interestAmount")}` : ""
+              }
+              placeholder="Interest Amount"
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
 
-            <div>
-              <label className="block mb-1">Total Payable</label>
-              <input
-                type="text"
-                readOnly
-                value={watch("totalPayable") ? `₹${watch("totalPayable")}` : ""}
-                placeholder="Total Payable"
-                className="p-2 rounded bg-gray-700 w-full"
-              />
-            </div>
+          <div>
+            <label className="block mb-1">Total Payable</label>
+            <input
+              type="text"
+              readOnly
+              value={watch("totalPayable") ? `₹${watch("totalPayable")}` : ""}
+              placeholder="Total Payable"
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
 
-            <div>
-              <label className="block mb-1">Monthly EMI</label>
-              <input
-                type="text"
-                readOnly
-                value={watch("monthlyEMI") ? `₹${watch("monthlyEMI")}` : ""}
-                placeholder="Monthly EMI"
-                className="p-2 rounded bg-gray-700 w-full"
-              />
-            </div>
+          <div>
+            <label className="block mb-1">Monthly EMI</label>
+            <input
+              type="text"
+              readOnly
+              value={watch("monthlyEMI") ? `₹${watch("monthlyEMI")}` : ""}
+              placeholder="Monthly EMI"
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
 
           <div className="md:col-span-2">
             <textarea
@@ -207,6 +224,7 @@ const CreateLoanPage = () => {
             Submit Loan
           </button>
         </form>
+        <Popup />
       </main>
     </div>
   );

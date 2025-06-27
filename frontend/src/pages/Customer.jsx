@@ -6,14 +6,14 @@ import AddCustomer from "../components/AddCustomer";
 import CreateLoan from "../components/CreateLoan";
 import CustomerList from "../components/CustomerList";
 import Repayment from "../components/Repayment";
-import PopupContextProvider from "../context/PopupContext";
+import {PopupProvider} from "../context/PopupContext";
 import { useTabButtonContext } from "../context/TabButtonContext";
 
 const Customer = () => {
   const {activeTab, setActiveTab} = useTabButtonContext();
   
   return (
-    <PopupContextProvider>
+    <PopupProvider>
       <div className="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
         <Navbar />
         <div className="flex w-full max-w-6xl gap-2 justify-start">
@@ -31,7 +31,7 @@ const Customer = () => {
         {activeTab === "Loans" && <CreateLoan />}
         {activeTab === "Repayments" && <Repayment />}
       </div>
-    </PopupContextProvider>
+    </PopupProvider>
   );
 };
 

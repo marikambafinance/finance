@@ -9,6 +9,7 @@ const Repayment = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const [loading, setLoading] = useState(false);
   const { loanList } = useLoanListContext();
+  const [hasSearched, setHasSearched] = useState(false);
   const [hpNumber, setHpNumber] = useState("");
 
   const handleClick = async () => {
@@ -16,6 +17,7 @@ const Repayment = () => {
     setLoading(true);
     await fetchLoanWithRepayments(hpNumber);
     setLoading(false);
+    setHasSearched(true);
     setHpNumber("");
   };
 
@@ -51,13 +53,18 @@ const Repayment = () => {
           <Loader />
         ) : (
           <div>
-            {loanList?.data?.length > 0 &&
+            {loanList?.data?.length > 0 ? (
               loanList?.data?.map((item) => (
                 <LoanCard
                   loan={item}
                   customerDetails={loanList?.customerDetails}
                 />
-              ))}
+              ))
+            ) : hasSearched ? (
+              <div className="text-gray-400 mt-4 text-center">
+                No loan records found.
+              </div>
+            ) : null}
           </div>
         )}
       </main>
