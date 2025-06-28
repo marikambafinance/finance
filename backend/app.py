@@ -20,8 +20,8 @@ CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
 #load_dotenv()
-mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+#mongo_uri=os.getenv("MONGO_URI")
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
@@ -144,6 +144,130 @@ def total_loan_payable(loanId):
         return str(new_total)
     else:
         return str(old_total)   
+
+
+def get_cust_loans_info(hpNumber):
+    pipeline = [
+                            {"$match": {"hpNumber": hpNumber}},
+
+                            # Lookup loans (array of loans or empty)
+                            {
+                                "$lookup": {
+                                    "from": "loans",
+                                    "localField": "hpNumber",
+                                    "foreignField": "hpNumber",
+                                    "as": "loans"
+                                }
+                            },
+
+                            # Lookup all repayments and group by loanId
+                            {
+                                "$lookup": {
+                                    "from": "repayments",
+                                    "pipeline": [
+                                        {
+                                            "$match": {
+                                                "status": "paid"
+                                            }
+                                        },
+                                        {
+                                            "$group": {
+                                                "_id": "$loanId",
+                                                "total_paid": {"$sum": {"$toDouble": "$amountPaid"}},
+                                                 "paid_count": { "$sum": 1 }
+                                            }
+                                        }
+                                    ],
+                                    "as": "repayment_totals"
+                                }
+                            },
+
+                            # Merge repayment total into each loan
+                                                        {
+                                    "$addFields": {
+                                        "loans": {
+                                            "$map": {
+                                                "input": "$loans",
+                                                "as": "loan",
+                                                "in": {
+                                                    "$mergeObjects": [
+                                                        "$$loan",
+                                                        {
+                                                            "total_paid": {
+                                                                "$ifNull": [
+                                                                    {
+                                                                        "$let": {
+                                                                            "vars": {
+                                                                                "match": {
+                                                                                    "$first": {
+                                                                                        "$filter": {
+                                                                                            "input": "$repayment_totals",
+                                                                                            "as": "r",
+                                                                                            "cond": {
+                                                                                                "$eq": ["$$r._id", "$$loan.loanId"]
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                            },
+                                                                            "in": "$$match.total_paid"
+                                                                        }
+                                                                    },
+                                                                    0
+                                                                ]
+                                                            },
+                                                            "paid_count": {
+                                                                "$ifNull": [
+                                                                    {
+                                                                        "$let": {
+                                                                            "vars": {
+                                                                                "match": {
+                                                                                    "$first": {
+                                                                                        "$filter": {
+                                                                                            "input": "$repayment_totals",
+                                                                                            "as": "r",
+                                                                                            "cond": {
+                                                                                                "$eq": ["$$r._id", "$$loan.loanId"]
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                            },
+                                                                            "in": "$$match.paid_count"
+                                                                        }
+                                                                    },
+                                                                    0
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+
+                            # Remove the repayment_totals array
+                            {
+                                "$project": {
+                                    "repayment_totals": 0
+                                }
+                            }
+                        ]
+    result = list(db.customers.aggregate(pipeline))
+    def serialize_object_ids(data):
+            if isinstance(data, list):
+                return [serialize_object_ids(doc) for doc in data]
+            elif isinstance(data, dict):
+                for key in list(data.keys()):
+                    if isinstance(data[key], ObjectId):
+                        data[key] = str(data[key])
+                    elif isinstance(data[key], (dict, list)):
+                        data[key] = serialize_object_ids(data[key])
+                return data
+            return data
+    result = serialize_object_ids(result)
+    return list(result)
 
 
 def insert_loan_data(loan_data):
@@ -288,12 +412,7 @@ def get_all_customers():
 def get_all_customers_loans():
     data = request.get_json(force=True)
     if "hpNumber" in data.keys():
-        customers = list(collection.find({"hpNumber":data["hpNumber"]}))
-        serialized_customers = [serialize_doc(doc) for doc in customers]
-        for customer in serialized_customers:
-            loans = list(db.loans.find({"hpNumber":customer["hpNumber"]}))
-            serialized_loans = [serialize_doc(doc) for doc in loans]
-            customer["loans"]= serialized_loans
+        serialized_customers = get_cust_loans_info(data["hpNumber"])
         return jsonify({"customers_data":serialized_customers,"status":"success"}),200
     else:
         return jsonify({"message":"missing hpNumber","status":"error"}),400
