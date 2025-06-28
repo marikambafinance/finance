@@ -485,6 +485,12 @@ def global_auth_check():
 @app.route("/search",methods=["POST","OPTIONS"])
 def search():
     data = request.get_json(force=True)
+    
+    if "loanId" in data.keys():
+        res = db.loans.find_one({"loanId":data["loanId"]},{"hpNumber":1,"_id":0})
+        data={}
+        data["hpNumber"]=res["hpNumber"]
+
     query = {
         key : {"$regex":value,"$options":"i"}
         for key,value in data.items()
@@ -832,7 +838,7 @@ def dashboard_stats():
             {
                 "$group": {
                     "_id": None,
-                    "penaltyAmount": {"$sum": {"$toDouble": "$penaltyAmount"}},
+                    "penaltyAmount": {"$sum": {"$toDouble": "$penalty"}},
                     "recoveryCount": {"$sum": {"$cond": [{"$eq": ["$recoveryAgent", True]}, 1, 0]}}
                 }
             },
