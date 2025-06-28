@@ -761,123 +761,151 @@ def update_customer():
 @app.route("/dashboard-stats", methods=["GET","OPTIONS"])
 def dashboard_stats():
     try:
-        # Basic counts
+        today = datetime.now()
+        first_of_month = today.replace(day=1)
+
+        # Totals
         total_customers = db.customers.count_documents({})
 
-        loan_agg = list(db.loans.aggregate([
+        loan_stats = db.loans.aggregate([
             {
                 "$group": {
                     "_id": None,
                     "totalLoans": {"$sum": 1},
-                    "activeLoans": {
-                        "$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}
-                    },
-                    "closedLoans": {
-                        "$sum": {"$cond": [{"$eq": ["$status", "closed"]}, 1, 0]}
-                    },
-                    "totalAmountIssued": {"$sum": {"$toDouble": "$loanAmount"}}
+                    "activeLoans": {"$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}},
+                    "closedLoans": {"$sum": {"$cond": [{"$eq": ["$status", "closed"]}, 1, 0]}},
+                    "amountIssued": {"$sum": {"$toDouble": "$loanAmount"}}
+                }
+            }
+        ])
+        loan_data = next(loan_stats, {})
+
+        repayment_stats = db.repayments.aggregate([
+            {"$match": {"status": "paid"}},
+            {
+                "$group": {
+                    "_id": None,
+                    "amountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
+                    "totalRepayments": {"$sum": 1}
+                }
+            }
+        ])
+        repayment_data = next(repayment_stats, {})
+
+        # Interest collected from loans with paid repayments
+        interest_stats = db.loans.aggregate([
+            {
+                "$lookup": {
+                    "from": "repayments",
+                    "localField": "loanId",
+                    "foreignField": "loanId",
+                    "as": "repayments"
+                }
+            },
+            {"$match": {"repayments.status": "paid"}},
+            {
+                "$group": {
+                    "_id": None,
+                    "interestCollected": {"$sum": {"$toDouble": "$interestAmount"}}
+                }
+            }
+        ])
+        interest_data = next(interest_stats, {"interestCollected": 0})
+
+        # Penalty and Recovery agent fees
+        penalty_stats = db.repayments.aggregate([
+            {"$match": {"status": "paid"}},
+            {
+                "$group": {
+                    "_id": None,
+                    "penaltyAmount": {"$sum": {"$toDouble": "$penaltyAmount"}},
+                    "recoveryCount": {"$sum": {"$cond": [{"$eq": ["$recoveryAgent", True]}, 1, 0]}}
+                }
+            },
+            {
+                "$project": {
+                    "penaltyAmount": 1,
+                    "recoveryAgentAmount": {"$multiply": ["$recoveryCount", 500]}
+                }
+            }
+        ])
+        penalty_data = next(penalty_stats, {"penaltyAmount": 0, "recoveryAgentAmount": 0})
+
+        # Recent
+        new_customers = db.customers.count_documents({"InsertedOn": {"$gte": first_of_month}})
+        repayments_this_month = db.repayments.count_documents({"status": "paid", "paymentDate": {"$gte": first_of_month}})
+
+        # Repeat and active customers
+        repeat_customers = db.loans.aggregate([
+            {"$group": {"_id": "$hpNumber", "count": {"$sum": 1}}},
+            {"$match": {"count": {"$gt": 1}}},
+            {"$count": "repeatCount"}
+        ])
+        repeat_count = next(repeat_customers, {}).get("repeatCount", 0)
+
+        active_customers = len(db.loans.distinct("hpNumber", {"status": "active"}))
+
+        # Defaulters
+        defaulters = list(db.repayments.aggregate([
+            {"$match": {"dueDate": {"$lt": today}, "status": {"$ne": "paid"}}},
+            {
+                "$group": {
+                    "_id": "$loanId",
+                    "overdueAmount": {"$sum": {"$toDouble": "$amountDue"}},
+                    "hpNumber": {"$first": "$hpNumber"}
                 }
             }
         ]))
 
-        repayment_agg = list(db.repayments.aggregate([
-            {"$match": {"status": "paid"}},
-            {"$group": {
-                "_id": None,
-                "totalAmountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
-                "totalRepayments": {"$sum": 1}
-            }}
-        ]))
+        defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
+        total_overdue = round(sum(d["overdueAmount"] for d in defaulters), 2)
 
-        # New customers this month
-        first_of_month = datetime.today().replace(day=1)
-        new_customers_this_month = db.customers.count_documents({
-            "InsertedOn": { "$gte": first_of_month }
-        })
+        # Calculate averages
+        total_loans = loan_data.get("totalLoans", 0)
+        amount_issued = loan_data.get("amountIssued", 0)
+        amount_received = repayment_data.get("amountReceived", 0)
 
-        # Repayments this month
-        repayments_this_month = db.repayments.count_documents({
-            "status": "paid",
-            "paymentDate": { "$gte": first_of_month }
-        })
-
-        # Repeat customers
-        repeat_customers = len(list(db.loans.aggregate([
-            {"$group": {"_id": "$hpNumber", "count": {"$sum": 1}}},
-            {"$match": {"count": {"$gt": 1}}}
-        ])))
-
-        today = datetime.now()
-
-        defaulters_agg = list(db.repayments.aggregate([
-        {
-            "$match": {
-                "dueDate": {"$lt": today},
-                "status": {"$ne": "paid"}
-            }
-        },
-        {
-            "$group": {
-                "_id": "$loanId",  # Group by loanId
-                "totalOverdue": { "$sum": { "$toDouble": "$amountDue" } },
-                "hpNumber": { "$first": "$hpNumber" }  # Assumes hpNumber exists in repayment
-            }
-        }
-    ]))
-
-        # Step 2: Unique defaulters (by customer)
-        total_defaulters = len({item["hpNumber"] for item in defaulters_agg if "hpNumber" in item})
-        total_overdue_amount = round(sum(item["totalOverdue"] for item in defaulters_agg), 2)
-
-                # Customers with active loans
-        active_customers = len(db.loans.distinct("hpNumber", {"status": "active"}))
-
-        # Extracted values
-        loan_data = loan_agg[0] if loan_agg else {}
-        repayment_data = repayment_agg[0] if repayment_agg else {}
-
-        totalLoans = loan_data.get("totalLoans", 0)
-        totalIssued = float(loan_data.get("totalAmountIssued", 0))
-        totalReceived = float(repayment_data.get("totalAmountReceived", 0))
-
-        # Safe average
-        avgLoanSize = round(totalIssued / totalLoans, 2) if totalLoans else 0
-        repaymentRate = round((totalReceived / totalIssued) * 100, 2) if totalIssued else 0
+        avg_loan = round(amount_issued / total_loans, 2) if total_loans else 0
+        repayment_rate = round((amount_received / amount_issued) * 100, 2) if amount_issued else 0
 
         return jsonify({
             "status": "success",
             "totals": {
                 "customers": total_customers,
-                "loans": totalLoans,
+                "loans": total_loans,
                 "activeLoans": loan_data.get("activeLoans", 0),
                 "closedLoans": loan_data.get("closedLoans", 0),
-                "amountIssued": round(totalIssued, 2),
-                "amountReceived": round(totalReceived, 2)
+                "amountIssued": round(amount_issued, 2),
+                "amountReceived": round(amount_received, 2),
+                "interestCollected": round(interest_data.get("interestCollected", 0), 2),
+                "penaltyAmount": round(penalty_data.get("penaltyAmount", 0), 2),
+                "recoveryAgentAmount": penalty_data.get("recoveryAgentAmount", 0)
             },
             "averages": {
-                "loanSize": avgLoanSize,
-                "repaymentRatePercent": repaymentRate
+                "loanSize": avg_loan,
+                "repaymentRatePercent": repayment_rate
             },
             "recent": {
-                "newCustomersThisMonth": new_customers_this_month,
+                "newCustomersThisMonth": new_customers,
                 "repaymentsThisMonth": repayments_this_month
             },
             "breakdown": {
-                "repeatCustomers": repeat_customers,
+                "repeatCustomers": repeat_count,
                 "customersWithActiveLoans": active_customers
             },
             "defaulters": {
-                "count": total_defaulters,
-                "overdueAmount": total_overdue_amount,
+                "count": len(defaulter_customers),
+                "overdueAmount": total_overdue,
                 "loans": [
                     {
-                        "loanId": item["_id"],
-                        "hpNumber": item["hpNumber"],
-                        "overdueAmount": round(item["totalOverdue"], 2)
-                    } for item in defaulters_agg
+                        "loanId": d["_id"],
+                        "hpNumber": d["hpNumber"],
+                        "overdueAmount": round(d["overdueAmount"], 2)
+                    } for d in defaulters
                 ]
             }
         })
+
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
