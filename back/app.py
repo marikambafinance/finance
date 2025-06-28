@@ -80,21 +80,19 @@ def send_due_soon_emails(records):
 
 def calculate_penalty(start_date, end_date, monthly_penalty=300):
     if end_date < start_date:
-        return 0  # or raise error if needed
+        return 0, 0  # consistent tuple return
 
     delta = end_date - start_date
 
-    # Rule: No penalty if <= 5 days
+    # No penalty if overdue by 5 or fewer days
     if delta.days <= 5:
-        return 0
+        return 0, 0
 
-    # Else calculate months + 1 if any extra days
     diff = relativedelta(end_date, start_date)
     months = diff.years * 12 + diff.months
 
-    # Add one more month if there's any remaining days
     if diff.days > 0:
-        months += 1
+        months += 1  # Round up if even a partial month
 
     return months * monthly_penalty, months
 
