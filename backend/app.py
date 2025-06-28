@@ -128,22 +128,107 @@ def insert_customer(customer_data):
         customer_data.pop("_id",None)
         return {"insert_id": str(result.inserted_id),"data":customer_data}
 
-def total_loan_payable(loanId):
+def total_loan_payable(hpNumber):
     pipeline = [
-                {"$match": {"loanId": loanId}},  # Filter by loanId
-                {"$group": {
-                    "_id": "$loanId",
-                    "total_payable": {"$sum": { "$toDouble": "$totalAmountDue" }}
-                }}
-            ]
-    result = list(db.repayments.aggregate(pipeline))
-    old_total = float(db.loans.find_one({"loanId":loanId},{"totalPayable":1})["totalPayable"])
-    new_total = round(float(result[0]["total_payable"]),1)
-    if new_total>old_total:
-        db.loans.update_one({"loanId":loanId},{"$set":{"totalPayable":str(new_total)}})
-        return str(new_total)
-    else:
-        return str(old_total)   
+                    {"$match": {"hpNumber": hpNumber}},  # filter customer
+
+                    # Get loans for this customer
+                    {
+                        "$lookup": {
+                            "from": "loans",
+                            "localField": "hpNumber",
+                            "foreignField": "hpNumber",
+                            "as": "loans"
+                        }
+                    },
+
+                    # Unwind loans to work on each individually
+                    {"$unwind": {"path": "$loans", "preserveNullAndEmptyArrays": True}},
+
+                    # Lookup repayments per loan
+                    {
+                        "$lookup": {
+                            "from": "repayments",
+                            "let": {"loanId": "$loans.loanId"},
+                            "pipeline": [
+                                {
+                                    "$match": {
+                                        "$expr": {
+                                            "$eq": ["$loanId", "$$loanId"]
+                                        }
+                                    }
+                                },
+                                {
+                                    "$group": {
+                                        "_id": None,
+                                        "totalPayable": {"$sum": {"$toDouble": "$totalAmountDue"}},
+                                        "totalPaid": {
+                                            "$sum": {
+                                                "$cond": [
+                                                    { "$eq": ["$status", "paid"] },
+                                                    { "$toDouble": "$amountPaid" },
+                                                    0
+                                                ]
+                                            }
+                                        },
+                                        "paidCount": {
+                                            "$sum": {
+                                                "$cond": [
+                                                    { "$eq": ["$status", "paid"] },
+                                                    1,
+                                                    0
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            "as": "repayment_summary"
+                        }
+                    },
+
+                    # Add totalPayable, totalPaid, paidCount into loans
+                    {
+                        "$addFields": {
+                            "loans.totalPayable": {
+                                "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.totalPayable", 0] }, "0"]
+                            },
+                            "loans.totalPaid": {
+                                "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.totalPaid", 0] }, "0"]
+                            },
+                            "loans.paidCount": {
+                                "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.paidCount", 0] }, 0]
+                            }
+                        }
+                    },
+
+                    # Group loans back into array
+                    {
+                        "$group": {
+                            "_id": "$_id",
+                            "customer": { "$first": "$$ROOT" },
+                            "loans": { "$push": "$loans" }
+                        }
+                    },
+
+                    # Merge into final customer + loans object
+                    {
+                        "$replaceRoot": {
+                            "newRoot": {
+                                "$mergeObjects": ["$customer", { "loans": "$loans" }]
+                            }
+                        }
+                    },
+
+                    # Clean repayment_summary
+                    {
+                        "$project": {
+                            "repayment_summary": 0
+                        }
+                    }
+                ]
+    result = list(db.customers.aggregate(pipeline))[0]
+    return result
 
 
 def get_cust_loans_info(hpNumber):
@@ -490,30 +575,33 @@ def get_repayment_info():
 def get_loans_with_repayments():
     try:
         data = request.get_json(force=True)
-        hp_number = data.get("hpNumber")
-
-        if not hp_number:
-            return jsonify({"error": "hpNumber is required"}), 400
+        if not "hpNumber" in data.keys():
+            return jsonify({"error": "customer_id is required"}), 400
+        customer_id = data.get("hpNumber")
+        result = total_loan_payable(customer_id)
         def serialize(doc):
-            doc["_id"] = str(doc["_id"])
-            return doc
-        loans = list(db.loans.find({"hpNumber": hp_number}))
-        customer_details = collection.find_one({"hpNumber": hp_number},{"firstName":1,"lastName":1,"phone":1,"_id":0})
-        #customer_seralized = serialize(customer_details)
-        # Serialize ObjectId and add repayments to each loan
-        
-
-        result = []
-        for loan in loans:
-            loan_serialized = serialize(loan)
-            total =total_loan_payable(loan["loanId"])
-            loan_serialized["totalPayable"]=total
-            result.append(loan_serialized)
+            if isinstance(doc, dict):
+                for k, v in doc.items():
+                    if isinstance(v, ObjectId):
+                        doc[k] = str(v)
+                    elif isinstance(v, list):
+                        doc[k] = [serialize(d) if isinstance(d, dict) else d for d in v]
+                    elif isinstance(v, dict):
+                        doc[k] = serialize(v)
+                return doc
+            else:
+                return doc 
+        result = serialize(result)
+        print(result)
 
         return jsonify({
             "status": "success",
-            "data": result,
-            "customerDetails":customer_details
+            "customerDetails": {
+                "firstName": result.get("firstName"),
+                "lastName": result.get("lastName"),
+                "phone": result.get("phone")
+            },
+            "data": result.get("loans", [])
         })
 
     except Exception as e:
