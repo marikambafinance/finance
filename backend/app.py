@@ -130,9 +130,9 @@ def insert_customer(customer_data):
 
 def total_loan_payable(hpNumber):
     pipeline = [
-                    {"$match": {"hpNumber": hpNumber}},  # filter customer
+                    { "$match": { "hpNumber": hpNumber } },  # Filter customer
 
-                    # Get loans for this customer
+                    # Lookup loans for this customer
                     {
                         "$lookup": {
                             "from": "loans",
@@ -142,26 +142,24 @@ def total_loan_payable(hpNumber):
                         }
                     },
 
-                    # Unwind loans to work on each individually
-                    {"$unwind": {"path": "$loans", "preserveNullAndEmptyArrays": True}},
+                    # Unwind loans to work on each loan
+                    { "$unwind": { "path": "$loans", "preserveNullAndEmptyArrays": True } },
 
-                    # Lookup repayments per loan
+                    # Lookup repayments for each loan
                     {
                         "$lookup": {
                             "from": "repayments",
-                            "let": {"loanId": "$loans.loanId"},
+                            "let": { "loanId": "$loans.loanId" },
                             "pipeline": [
                                 {
                                     "$match": {
-                                        "$expr": {
-                                            "$eq": ["$loanId", "$$loanId"]
-                                        }
+                                        "$expr": { "$eq": ["$loanId", "$$loanId"] }
                                     }
                                 },
                                 {
                                     "$group": {
-                                        "_id": None,
-                                        "totalPayable": {"$sum": {"$toDouble": "$totalAmountDue"}},
+                                        "_id": "$loanId",
+                                        "totalPayable": { "$sum": { "$toDouble": "$totalAmountDue" } },
                                         "totalPaid": {
                                             "$sum": {
                                                 "$cond": [
@@ -179,6 +177,34 @@ def total_loan_payable(hpNumber):
                                                     0
                                                 ]
                                             }
+                                        },
+                                        "missedCount": {
+                                            "$sum": {
+                                                "$cond": [
+                                                    {
+                                                        "$and": [
+                                                            { "$ne": ["$status", "paid"] },
+                                                            { "$lt": ["$dueDate", datetime.now()] }
+                                                        ]
+                                                    },
+                                                    1,
+                                                    0
+                                                ]
+                                            }
+                                        },
+                                        "latePaymentCount": {
+                                        "$sum": {
+                                            "$cond": [
+                                            {
+                                                "$and": [
+                                                { "$eq": ["$status", "paid"] },
+                                                { "$gt": ["$paidDate", "$dueDate"] }
+                                                ]
+                                            },
+                                            1,
+                                            0
+                                            ]
+                                        }
                                         }
                                     }
                                 }
@@ -187,22 +213,47 @@ def total_loan_payable(hpNumber):
                         }
                     },
 
-                    # Add totalPayable, totalPaid, paidCount into loans
+                    # Merge repayment summary into each loan using $map
                     {
                         "$addFields": {
-                            "loans.totalPayable": {
-                                "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.totalPayable", 0] }, "0"]
-                            },
-                            "loans.totalPaid": {
-                                "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.totalPaid", 0] }, "0"]
-                            },
-                            "loans.paidCount": {
-                                "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.paidCount", 0] }, 0]
+                            "loans": {
+                                "$mergeObjects": [
+                                    "$loans",
+                                    {
+                                        "totalPayable": {
+                                            "$ifNull": [
+                                                { "$arrayElemAt": ["$repayment_summary.totalPayable", 0] },
+                                                "0"
+                                            ]
+                                        },
+                                        "totalPaid": {
+                                            "$ifNull": [
+                                                { "$arrayElemAt": ["$repayment_summary.totalPaid", 0] },
+                                                "0"
+                                            ]
+                                        },
+                                        "paidCount": {
+                                            "$ifNull": [
+                                                { "$arrayElemAt": ["$repayment_summary.paidCount", 0] },
+                                                0
+                                            ]
+                                        },
+                                        "missedCount": {
+                                            "$ifNull": [
+                                                { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
+                                                0
+                                            ]
+                                        },
+                                        "latePaymentCount": {
+                                            "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] }, 0]
+                                            }
+                                    }
+                                ]
                             }
                         }
                     },
 
-                    # Group loans back into array
+                    # Group all loans back into array
                     {
                         "$group": {
                             "_id": "$_id",
@@ -211,7 +262,7 @@ def total_loan_payable(hpNumber):
                         }
                     },
 
-                    # Merge into final customer + loans object
+                    # Merge customer root with loans array
                     {
                         "$replaceRoot": {
                             "newRoot": {
@@ -220,7 +271,7 @@ def total_loan_payable(hpNumber):
                         }
                     },
 
-                    # Clean repayment_summary
+                    # Remove repayment_summary if present
                     {
                         "$project": {
                             "repayment_summary": 0
@@ -756,7 +807,7 @@ def dashboard_stats():
             {"$match": {"count": {"$gt": 1}}}
         ])))
 
-        today = datetime.utcnow()
+        today = datetime.now()
 
         defaulters_agg = list(db.repayments.aggregate([
         {
