@@ -592,7 +592,6 @@ def get_loans_with_repayments():
             else:
                 return doc 
         result = serialize(result)
-        print(result)
 
         return jsonify({
             "status": "success",
