@@ -359,6 +359,7 @@ def insert_loan_data(loan_data):
     #print(loan_data)
     if "hpNumber" in loan_data.keys():
         loan_data["loanId"] = generate_loan_id(loan_data.get("hpNumber"))
+        loan_data["status"] = "active"
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
         return {"data":loan_data}
@@ -377,6 +378,45 @@ def generate_unique_payment_id():
 def serialize_doc(doc):
     doc["_id"] = str(doc["_id"])
     return doc
+
+def close_loan_if_fully_paid(loan_id):
+    try:
+        # Count total and paid repayments for this loan
+        summary = db.repayments.aggregate([
+            { "$match": { "loanId": loan_id } },
+            { "$group": {
+                "_id": "$loanId",
+                "total": { "$sum": 1 },
+                "paid": {
+                    "$sum": {
+                        "$cond": [{ "$eq": ["$status", "paid"] }, 1, 0]
+                    }
+                }
+            }}
+        ])
+
+        summary = list(summary)
+        if summary and summary[0]["total"] == summary[0]["paid"]:
+            # All repayments are paid → close the loan
+            result = db.loans.update_one(
+                { "loanId": loan_id, "status": { "$ne": "closed" } },
+                { "$set": { "status": "closed" } }
+            )
+            return {
+                "status": "success",
+                "message": f"Loan {loan_id} marked as closed." if result.modified_count else "Loan already closed."
+            }
+
+        return {
+            "status": "success",
+            "message": f"Loan {loan_id} is not fully paid yet."
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 @app.before_request
 def global_auth_check():
@@ -633,6 +673,7 @@ def update_repayment():
             elif result.modified_count == 0:
                 return jsonify({"status":"error","message":"Document matched but no fields were updated (values may be the same)."}),400
             else:
+                close_loan_if_fully_paid(data.get("loanId").strip())
                 return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
 
         else:   
@@ -665,6 +706,131 @@ def update_customer():
         return jsonify({"status": "error", "message": "Customer not found"}), 404
 
     return jsonify({"status": "success", "message": "Record successfully updated"}), 200
+
+@app.route("/dashboard-stats", methods=["GET","OPTIONS"])
+def dashboard_stats():
+    try:
+        # Basic counts
+        total_customers = db.customers.count_documents({})
+
+        loan_agg = list(db.loans.aggregate([
+            {
+                "$group": {
+                    "_id": None,
+                    "totalLoans": {"$sum": 1},
+                    "activeLoans": {
+                        "$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}
+                    },
+                    "closedLoans": {
+                        "$sum": {"$cond": [{"$eq": ["$status", "closed"]}, 1, 0]}
+                    },
+                    "totalAmountIssued": {"$sum": {"$toDouble": "$loanAmount"}}
+                }
+            }
+        ]))
+
+        repayment_agg = list(db.repayments.aggregate([
+            {"$match": {"status": "paid"}},
+            {"$group": {
+                "_id": None,
+                "totalAmountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
+                "totalRepayments": {"$sum": 1}
+            }}
+        ]))
+
+        # New customers this month
+        first_of_month = datetime.today().replace(day=1)
+        new_customers_this_month = db.customers.count_documents({
+            "InsertedOn": { "$gte": first_of_month }
+        })
+
+        # Repayments this month
+        repayments_this_month = db.repayments.count_documents({
+            "status": "paid",
+            "paymentDate": { "$gte": first_of_month }
+        })
+
+        # Repeat customers
+        repeat_customers = len(list(db.loans.aggregate([
+            {"$group": {"_id": "$hpNumber", "count": {"$sum": 1}}},
+            {"$match": {"count": {"$gt": 1}}}
+        ])))
+
+        today = datetime.utcnow()
+
+        defaulters_agg = list(db.repayments.aggregate([
+        {
+            "$match": {
+                "dueDate": {"$lt": today},
+                "status": {"$ne": "paid"}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$loanId",  # Group by loanId
+                "totalOverdue": { "$sum": { "$toDouble": "$amountDue" } },
+                "hpNumber": { "$first": "$hpNumber" }  # Assumes hpNumber exists in repayment
+            }
+        }
+    ]))
+
+        # Step 2: Unique defaulters (by customer)
+        total_defaulters = len({item["hpNumber"] for item in defaulters_agg if "hpNumber" in item})
+        total_overdue_amount = round(sum(item["totalOverdue"] for item in defaulters_agg), 2)
+
+                # Customers with active loans
+        active_customers = len(db.loans.distinct("hpNumber", {"status": "active"}))
+
+        # Extracted values
+        loan_data = loan_agg[0] if loan_agg else {}
+        repayment_data = repayment_agg[0] if repayment_agg else {}
+
+        totalLoans = loan_data.get("totalLoans", 0)
+        totalIssued = float(loan_data.get("totalAmountIssued", 0))
+        totalReceived = float(repayment_data.get("totalAmountReceived", 0))
+
+        # Safe average
+        avgLoanSize = round(totalIssued / totalLoans, 2) if totalLoans else 0
+        repaymentRate = round((totalReceived / totalIssued) * 100, 2) if totalIssued else 0
+
+        return jsonify({
+            "status": "success",
+            "totals": {
+                "customers": total_customers,
+                "loans": totalLoans,
+                "activeLoans": loan_data.get("activeLoans", 0),
+                "closedLoans": loan_data.get("closedLoans", 0),
+                "amountIssued": round(totalIssued, 2),
+                "amountReceived": round(totalReceived, 2)
+            },
+            "averages": {
+                "loanSize": avgLoanSize,
+                "repaymentRatePercent": repaymentRate
+            },
+            "recent": {
+                "newCustomersThisMonth": new_customers_this_month,
+                "repaymentsThisMonth": repayments_this_month
+            },
+            "breakdown": {
+                "repeatCustomers": repeat_customers,
+                "customersWithActiveLoans": active_customers
+            },
+            "defaulters": {
+                "count": total_defaulters,
+                "overdueAmount": total_overdue_amount,
+                "loans": [
+                    {
+                        "loanId": item["_id"],
+                        "hpNumber": item["hpNumber"],
+                        "overdueAmount": round(item["totalOverdue"], 2)
+                    } for item in defaulters_agg
+                ]
+            }
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
     
 @app.route("/")
 def home():
