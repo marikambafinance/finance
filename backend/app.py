@@ -786,11 +786,25 @@ def dashboard_stats():
                 "$group": {
                     "_id": None,
                     "amountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
-                    "totalRepayments": {"$sum": 1}
+                    "paidCount": {"$sum": 1}
                 }
             }
         ])
         repayment_data = next(repayment_stats, {})
+
+        total_repayments_stats = db.repayments.aggregate([
+            {
+                "$group": {
+                    "_id": None,
+                    "totalCount": {"$sum": 1}
+                }
+            }
+        ])
+        total_repayments_data = next(total_repayments_stats, {"totalCount": 0})
+
+        total_count = total_repayments_data.get("totalCount", 0)
+        paid_count = repayment_data.get("paidCount", 0)
+        repayment_rate = round((paid_count / total_count) * 100, 2) if total_count else 0
 
         # Interest collected from loans with paid repayments
         interest_stats = db.loans.aggregate([
@@ -851,7 +865,7 @@ def dashboard_stats():
             {
                 "$group": {
                     "_id": "$loanId",
-                    "overdueAmount": {"$sum": {"$toDouble": "$amountDue"}},
+                    "overdueAmount": {"$sum": {"$toDouble": "$totalAmountDue"}},
                     "hpNumber": {"$first": "$hpNumber"}
                 }
             }
@@ -863,10 +877,8 @@ def dashboard_stats():
         # Calculate averages
         total_loans = loan_data.get("totalLoans", 0)
         amount_issued = loan_data.get("amountIssued", 0)
-        amount_received = repayment_data.get("amountReceived", 0)
 
         avg_loan = round(amount_issued / total_loans, 2) if total_loans else 0
-        repayment_rate = round((amount_received / amount_issued) * 100, 2) if amount_issued else 0
 
         return jsonify({
             "status": "success",
@@ -876,7 +888,7 @@ def dashboard_stats():
                 "activeLoans": loan_data.get("activeLoans", 0),
                 "closedLoans": loan_data.get("closedLoans", 0),
                 "amountIssued": round(amount_issued, 2),
-                "amountReceived": round(amount_received, 2),
+                "amountReceived": round(repayment_data.get("amountReceived", 0), 2),
                 "interestCollected": round(interest_data.get("interestCollected", 0), 2),
                 "penaltyAmount": round(penalty_data.get("penaltyAmount", 0), 2),
                 "recoveryAgentAmount": penalty_data.get("recoveryAgentAmount", 0)
@@ -905,6 +917,7 @@ def dashboard_stats():
                 ]
             }
         })
+
 
 
     except Exception as e:
