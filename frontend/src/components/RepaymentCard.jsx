@@ -3,7 +3,7 @@ import moment from "moment-timezone";
 import { useForm } from "react-hook-form";
 import Loader from "./Loader";
 
-const RepaymentCard = ({ repayment, onUpdateSuccess }) => {
+const RepaymentCard = ({ repayment, onUpdateSuccess, updateLoans, hpNumber }) => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -84,6 +84,7 @@ const RepaymentCard = ({ repayment, onUpdateSuccess }) => {
     console.log(data);
     setLoading(true);
     await updateRepayment(data);
+    await updateLoans(hpNumber);
     setLoading(false);
     reset();
     setEditMode(false); // Exit edit mode after update

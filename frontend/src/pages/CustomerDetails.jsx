@@ -29,6 +29,7 @@ const CustomerDetails = () => {
   const { updateCustomerData } = useCustomerUpdate();
   const { hpNumber } = location?.state || {};
   const { custDetails, getCustomerDetails } = useCustomerDetails(hpNumber);
+  console.log(custDetails)
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -139,7 +140,7 @@ const CustomerDetails = () => {
     {
       name: "dob",
       label: "Date of Birth",
-      icon: <Heart />,
+      icon: <Calendar />,
       value: watch("dob"),
       type: "date",
     },

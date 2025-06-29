@@ -9,9 +9,11 @@ const Repayment = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const [loading, setLoading] = useState(false);
   const { loanList } = useLoanListContext();
+  console.log(loanList)
   const [hasSearched, setHasSearched] = useState(false);
   const [hpNumber, setHpNumber] = useState("");
 
+  console.log(loanList)
   const handleClick = async () => {
     if (!hpNumber) return;
     setLoading(true);
@@ -56,6 +58,7 @@ const Repayment = () => {
             {loanList?.data?.length > 0 ? (
               loanList?.data?.map((item) => (
                 <LoanCard
+                  key={item?.loanId}
                   loan={item}
                   customerDetails={loanList?.customerDetails}
                 />

@@ -48,6 +48,7 @@ const Search = ({setLoading}) => {
           <option value="lastName">Lastname</option>
           <option value="phone">Phone Number</option>
           <option value="hpNumber">HP Number</option>
+          <option value="loanId">Loan ID</option>
         </select>
       </div>
       <input

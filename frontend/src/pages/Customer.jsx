@@ -1,17 +1,20 @@
-import React, { useState } from "react";
+import React, { Suspense } from "react";
 import TabFormButton from "../components/TabFormButton";
 import { tabFormButtons } from "../utils/buttonsConfig";
 import Navbar from "../components/Navbar";
-import AddCustomer from "../components/AddCustomer";
-import CreateLoan from "../components/CreateLoan";
-import CustomerList from "../components/CustomerList";
-import Repayment from "../components/Repayment";
-import {PopupProvider} from "../context/PopupContext";
+import { PopupProvider } from "../context/PopupContext";
 import { useTabButtonContext } from "../context/TabButtonContext";
+import { Loader2 } from "lucide-react";
+
+const AddCustomer = React.lazy(() => import("../components/AddCustomer"));
+const CreateLoan = React.lazy(() => import("../components/CreateLoan"));
+const CustomerList = React.lazy(() => import("../components/CustomerList"));
+const Repayment = React.lazy(() => import("../components/Repayment"));
+const Summary = React.lazy(() => import("../components/Summary"));
 
 const Customer = () => {
-  const {activeTab, setActiveTab} = useTabButtonContext();
-  
+  const { activeTab, setActiveTab } = useTabButtonContext();
+
   return (
     <PopupProvider>
       <div className="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
@@ -26,10 +29,14 @@ const Customer = () => {
             />
           ))}
         </div>
-        {activeTab === "Customers" && <AddCustomer />}
-        {activeTab === "Customers List" && <CustomerList />}
-        {activeTab === "Loans" && <CreateLoan />}
-        {activeTab === "Repayments" && <Repayment />}
+
+        <Suspense fallback={<Loader2 />}>
+          {activeTab === "Customers" && <AddCustomer />}
+          {activeTab === "Customers List" && <CustomerList />}
+          {activeTab === "Loans" && <CreateLoan />}
+          {activeTab === "Repayments" && <Repayment />}
+          {activeTab === "Summary" && <Summary />}
+        </Suspense>
       </div>
     </PopupProvider>
   );
