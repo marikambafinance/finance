@@ -7,15 +7,25 @@ import CustomerDetails from "./pages/CustomerDetails";
 import LoanListContextProvider from "./context/LoanListContext";
 import LoanRepayments from "./pages/LoanRepayments";
 import TabButtonContextProvider from "./context/TabButtonContext";
+import Login from "./pages/Login";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const router = createBrowserRouter([
+  { path: "/login", element: <Login /> },
   {
     path: "/",
-    element: <Home />,
+    element: (
+        <Home />      
+    ),
   },
   {
     path: "/customer",
-    element: <Customer />,
+    element: (
+      <ProtectedRoute>
+        <Customer />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/about",
@@ -23,23 +33,33 @@ const router = createBrowserRouter([
   },
   {
     path: "/customer/customer-details/:hpNumber",
-    element: <CustomerDetails />,
+    element: (
+      <ProtectedRoute>
+        <CustomerDetails />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/customer/:hpNumber/loan/:loanId",
-    element: <LoanRepayments />,
+    element: (
+      <ProtectedRoute>
+        <LoanRepayments />
+      </ProtectedRoute>
+    ),
   },
 ]);
 
 const App = () => {
   return (
-    <TabButtonContextProvider>
-      <CustomerProvider>
-        <LoanListContextProvider>
-          <RouterProvider router={router} />
-        </LoanListContextProvider>
-      </CustomerProvider>
-    </TabButtonContextProvider>
+    <AuthProvider>
+      <TabButtonContextProvider>
+        <CustomerProvider>
+          <LoanListContextProvider>
+            <RouterProvider router={router} />
+          </LoanListContextProvider>
+        </CustomerProvider>
+      </TabButtonContextProvider>
+    </AuthProvider>
   );
 };
 

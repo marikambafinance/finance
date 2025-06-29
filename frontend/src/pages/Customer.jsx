@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import { PopupProvider } from "../context/PopupContext";
 import { useTabButtonContext } from "../context/TabButtonContext";
 import { Loader2 } from "lucide-react";
+import Loader from "../components/Loader";
 
 const AddCustomer = React.lazy(() => import("../components/AddCustomer"));
 const CreateLoan = React.lazy(() => import("../components/CreateLoan"));
@@ -30,7 +31,7 @@ const Customer = () => {
           ))}
         </div>
 
-        <Suspense fallback={<Loader2 />}>
+        <Suspense fallback={<Loader />}>
           {activeTab === "Customers" && <AddCustomer />}
           {activeTab === "Customers List" && <CustomerList />}
           {activeTab === "Loans" && <CreateLoan />}
