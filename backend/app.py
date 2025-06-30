@@ -22,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 #load_dotenv() 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
@@ -148,154 +148,150 @@ def insert_customer(customer_data):
 
 def total_loan_payable(hpNumber):
     pipeline = [
-                    { "$match": { "hpNumber": hpNumber } },  # Filter customer
+        { "$match": { "hpNumber": hpNumber } },  # Filter customer by hpNumber
 
-                    # Lookup loans for this customer
+        # Lookup loans for the customer
+        {
+            "$lookup": {
+                "from": "loans",
+                "localField": "hpNumber",
+                "foreignField": "hpNumber",
+                "as": "loans"
+            }
+        },
+
+        # Unwind loans to process each individually
+        { "$unwind": { "path": "$loans", "preserveNullAndEmptyArrays": True } },
+
+        # Lookup repayment stats per loan
+        {
+            "$lookup": {
+                "from": "repayments",
+                "let": { "loanId": "$loans.loanId" },
+                "pipeline": [
                     {
-                        "$lookup": {
-                            "from": "loans",
-                            "localField": "hpNumber",
-                            "foreignField": "hpNumber",
-                            "as": "loans"
+                        "$match": {
+                            "$expr": { "$eq": ["$loanId", "$$loanId"] }
                         }
                     },
-
-                    # Unwind loans to work on each loan
-                    { "$unwind": { "path": "$loans", "preserveNullAndEmptyArrays": True } },
-
-                    # Lookup repayments for each loan
                     {
-                        "$lookup": {
-                            "from": "repayments",
-                            "let": { "loanId": "$loans.loanId" },
-                            "pipeline": [
-                                {
-                                    "$match": {
-                                        "$expr": { "$eq": ["$loanId", "$$loanId"] }
-                                    }
-                                },
-                                {
-                                    "$group": {
-                                        "_id": "$loanId",
-                                        "totalPayable": { "$sum": { "$toDouble": "$totalAmountDue" } },
-                                        "totalPaid": {
-                                            "$sum": {
-                                                "$cond": [
-                                                    { "$eq": ["$status", "paid"] },
-                                                    { "$toDouble": "$amountPaid" },
-                                                    0
-                                                ]
-                                            }
+                        "$group": {
+                            "_id": "$loanId",
+                            "totalPaid": {
+                                "$sum": {
+                                    "$cond": [
+                                        { "$eq": ["$status", "paid"] },
+                                        { "$toDouble": "$amountPaid" },
+                                        0
+                                    ]
+                                }
+                            },
+                            "paidCount": {
+                                "$sum": {
+                                    "$cond": [
+                                        { "$eq": ["$status", "paid"] },
+                                        1,
+                                        0
+                                    ]
+                                }
+                            },
+                            "missedCount": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$and": [
+                                                { "$ne": ["$status", "paid"] },
+                                                { "$lt": ["$dueDate", datetime.now()] }
+                                            ]
                                         },
-                                        "paidCount": {
-                                            "$sum": {
-                                                "$cond": [
-                                                    { "$eq": ["$status", "paid"] },
-                                                    1,
-                                                    0
-                                                ]
-                                            }
-                                        },
-                                        "missedCount": {
-                                            "$sum": {
-                                                "$cond": [
-                                                    {
-                                                        "$and": [
-                                                            { "$ne": ["$status", "paid"] },
-                                                            { "$lt": ["$dueDate", datetime.now()] }
-                                                        ]
-                                                    },
-                                                    1,
-                                                    0
-                                                ]
-                                            }
-                                        },
-                                        "latePaymentCount": {
-                                        "$sum": {
-                                            "$cond": [
-                                            {
-                                                "$and": [
+                                        1,
+                                        0
+                                    ]
+                                }
+                            },
+                            "latePaymentCount": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$and": [
                                                 { "$eq": ["$status", "paid"] },
                                                 { "$gt": ["$paidDate", "$dueDate"] }
-                                                ]
-                                            },
-                                            1,
-                                            0
                                             ]
-                                        }
-                                        }
-                                    }
+                                        },
+                                        1,
+                                        0
+                                    ]
                                 }
-                            ],
-                            "as": "repayment_summary"
+                            }
                         }
-                    },
+                    }
+                ],
+                "as": "repayment_summary"
+            }
+        },
 
-                    # Merge repayment summary into each loan using $map
-                    {
-                        "$addFields": {
-                            "loans": {
-                                "$mergeObjects": [
-                                    "$loans",
-                                    {
-                                        "totalPayable": {
-                                            "$ifNull": [
-                                                { "$arrayElemAt": ["$repayment_summary.totalPayable", 0] },
-                                                "0"
-                                            ]
-                                        },
-                                        "totalPaid": {
-                                            "$ifNull": [
-                                                { "$arrayElemAt": ["$repayment_summary.totalPaid", 0] },
-                                                "0"
-                                            ]
-                                        },
-                                        "paidCount": {
-                                            "$ifNull": [
-                                                { "$arrayElemAt": ["$repayment_summary.paidCount", 0] },
-                                                0
-                                            ]
-                                        },
-                                        "missedCount": {
-                                            "$ifNull": [
-                                                { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
-                                                0
-                                            ]
-                                        },
-                                        "latePaymentCount": {
-                                            "$ifNull": [{ "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] }, 0]
-                                            }
-                                    }
+        # Merge repayment stats into the loan object
+        {
+            "$addFields": {
+                "loans": {
+                    "$mergeObjects": [
+                        "$loans",
+                        {
+                            "totalPaid": {
+                                "$ifNull": [
+                                    { "$arrayElemAt": ["$repayment_summary.totalPaid", 0] },
+                                    "0"
+                                ]
+                            },
+                            "paidCount": {
+                                "$ifNull": [
+                                    { "$arrayElemAt": ["$repayment_summary.paidCount", 0] },
+                                    0
+                                ]
+                            },
+                            "missedCount": {
+                                "$ifNull": [
+                                    { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
+                                    0
+                                ]
+                            },
+                            "latePaymentCount": {
+                                "$ifNull": [
+                                    { "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] },
+                                    0
                                 ]
                             }
                         }
-                    },
+                    ]
+                }
+            }
+        },
 
-                    # Group all loans back into array
-                    {
-                        "$group": {
-                            "_id": "$_id",
-                            "customer": { "$first": "$$ROOT" },
-                            "loans": { "$push": "$loans" }
-                        }
-                    },
+        # Group loans back into a list under the customer
+        {
+            "$group": {
+                "_id": "$_id",
+                "customer": { "$first": "$$ROOT" },
+                "loans": { "$push": "$loans" }
+            }
+        },
 
-                    # Merge customer root with loans array
-                    {
-                        "$replaceRoot": {
-                            "newRoot": {
-                                "$mergeObjects": ["$customer", { "loans": "$loans" }]
-                            }
-                        }
-                    },
+        # Replace root to flatten structure
+        {
+            "$replaceRoot": {
+                "newRoot": {
+                    "$mergeObjects": ["$customer", { "loans": "$loans" }]
+                }
+            }
+        },
 
-                    # Remove repayment_summary if present
-                    {
-                        "$project": {
-                            "repayment_summary": 0
-                        }
-                    }
-                ]
+        # Remove repayment_summary from the result
+        {
+            "$project": {
+                "repayment_summary": 0
+            }
+        }
+    ]
     result = list(db.customers.aggregate(pipeline))[0]
     return result
 
@@ -740,6 +736,7 @@ def update_repayment():
     total_amount_due = float(data["totalAmountDue"])  # convert to float if stored as numeric in DB
 
     try:
+        
         result = db.repayments.update_one(
             {"loanId": loan_id, "installmentNumber": installment_number},
             {"$set": {
@@ -752,7 +749,21 @@ def update_repayment():
                 "totalAmountDue": total_amount_due
             }}
         )
-
+        loan_res = db.repayments.aggregate([
+                    {"$match": {"loanId": loan_id}},
+                    {
+                        "$group": {
+                            "_id": "$loanId",
+                            "totalPayable": {"$sum": {"$toDouble": "$totalAmountDue"}}
+                        }
+                    }
+                ])
+        data = next(result, None)
+        total_payable = round(data["totalPayable"], 2)
+        update_result = db.loans.update_one(
+            {"loanId": loan_id},
+            {"$set": {"totalPayable": str(total_payable)}}
+        )
         if result.matched_count == 0:
             return jsonify({
                 "status": "error",
