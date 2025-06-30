@@ -165,70 +165,52 @@ def total_loan_payable(hpNumber):
 
         # Lookup repayment stats per loan
         {
-            "$lookup": {
-                "from": "repayments",
-                "let": { "loanId": "$loans.loanId" },
-                "pipeline": [
-                    {
-                        "$match": {
-                            "$expr": { "$eq": ["$loanId", "$$loanId"] }
-                        }
-                    },
-                    {
-                        "$group": {
-                            "_id": "$loanId",
-                            "totalPaid": {
-                                "$sum": {
-                                    "$cond": [
-                                        { "$eq": ["$status", "paid"] },
-                                        { "$toDouble": "$amountPaid" },
-                                        0
-                                    ]
-                                }
-                            },
-                            "paidCount": {
-                                "$sum": {
-                                    "$cond": [
-                                        { "$eq": ["$status", "paid"] },
-                                        1,
-                                        0
-                                    ]
-                                }
-                            },
-                            "missedCount": {
-                                "$sum": {
-                                    "$cond": [
-                                        {
-                                            "$and": [
-                                                { "$ne": ["$status", "paid"] },
-                                                { "$lt": ["$dueDate", datetime.now()] }
-                                            ]
-                                        },
-                                        1,
-                                        0
-                                    ]
-                                }
-                            },
-                            "latePaymentCount": {
-                                "$sum": {
-                                    "$cond": [
-                                        {
-                                            "$and": [
-                                                { "$eq": ["$status", "paid"] },
-                                                { "$gt": ["$paidDate", "$dueDate"] }
-                                            ]
-                                        },
-                                        1,
-                                        0
-                                    ]
-                                }
+        "$lookup": {
+            "from": "repayments",
+            "let": { "loanId": "$loans.loanId" },
+            "pipeline": [
+                {
+                    "$match": {
+                        "$expr": { "$eq": ["$loanId", "$$loanId"] }
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$loanId",
+                        "missedCount": {
+                            "$sum": {
+                                "$cond": [
+                                    {
+                                        "$and": [
+                                            { "$ne": ["$status", "paid"] },
+                                            { "$lt": ["$dueDate", datetime.now()] }
+                                        ]
+                                    },
+                                    1,
+                                    0
+                                ]
+                            }
+                        },
+                        "latePaymentCount": {
+                            "$sum": {
+                                "$cond": [
+                                    {
+                                        "$and": [
+                                            { "$eq": ["$status", "paid"] },
+                                            { "$gt": ["$paidDate", "$dueDate"] }
+                                        ]
+                                    },
+                                    1,
+                                    0
+                                ]
                             }
                         }
                     }
-                ],
-                "as": "repayment_summary"
-            }
-        },
+                }
+            ],
+            "as": "repayment_summary"
+        }
+    },
 
         # Merge repayment stats into the loan object
         {
@@ -237,18 +219,6 @@ def total_loan_payable(hpNumber):
                     "$mergeObjects": [
                         "$loans",
                         {
-                            "totalPaid": {
-                                "$ifNull": [
-                                    { "$arrayElemAt": ["$repayment_summary.totalPaid", 0] },
-                                    "0"
-                                ]
-                            },
-                            "paidCount": {
-                                "$ifNull": [
-                                    { "$arrayElemAt": ["$repayment_summary.paidCount", 0] },
-                                    0
-                                ]
-                            },
                             "missedCount": {
                                 "$ifNull": [
                                     { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
@@ -750,19 +720,32 @@ def update_repayment():
             }}
         )
         loan_res = db.repayments.aggregate([
-                    {"$match": {"loanId": loan_id}},
-                    {
-                        "$group": {
-                            "_id": "$loanId",
-                            "totalPayable": {"$sum": {"$toDouble": "$totalAmountDue"}}
+            { "$match": { "loanId": loan_id } },
+            {
+                "$group": {
+                    "_id": "$loanId",
+                    "totalPayable": { "$sum": { "$toDouble": "$totalAmountDue" } },
+                    "totalPaid": {
+                        "$sum": {
+                            "$cond": [
+                                { "$eq": ["$status", "paid"] },
+                                { "$toDouble": "$amountPaid" },
+                                0
+                            ]
                         }
                     }
-                ])
+                }
+            }
+        ])
+
         data = next(loan_res, None)
         total_payable = round(data["totalPayable"], 2)
+        total_paid = round(data["totalPaid"], 2)
+        total_amount_due = total_payable-total_paid
         update_result = db.loans.update_one(
             {"loanId": loan_id},
-            {"$set": {"totalPayable": str(total_payable)}}
+            {"$set": {"totalPayable": str(total_payable),"totalPaid":str(total_paid),
+                      "totalAmountDue":total_amount_due}}
         )
         if result.matched_count == 0:
             return jsonify({
