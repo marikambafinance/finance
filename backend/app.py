@@ -116,8 +116,8 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "paymentId": None,
                 "paymentMode": None,
                 "penalty": 0,
-                "totalAmountDue": emi,
-                "interestAmount": monthly_interest,
+                "totalAmountDue": str(emi),
+                "interestAmount": str(monthly_interest),
                 "updatedOn": None
             })
 
@@ -395,8 +395,10 @@ def insert_loan_data(loan_data):
     if "hpNumber" in loan_data.keys():
         loan_data["loanId"] = generate_loan_id(loan_data.get("hpNumber"))
         loan_data["status"] = "active"
+        loan_data["totalAmountDue"] =loan_data["totalPayable"]
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
+
         return {"data":loan_data}
     else:
         return {"error":"hpNumber was not sent"}
@@ -710,13 +712,13 @@ def update_repayment():
         result = db.repayments.update_one(
             {"loanId": loan_id, "installmentNumber": installment_number},
             {"$set": {
-                "amountPaid": amount_paid,
+                "amountPaid": str(amount_paid),
                 "status": status,
                 "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
                 "paymentId": generate_unique_payment_id(),
                 "paymentMode": payment_mode,
                 "recoveryAgent": recovery_agent,
-                "totalAmountDue": total_amount_due
+                "totalAmountDue": str(total_amount_due)
             }}
         )
         loan_res = db.repayments.aggregate([
@@ -745,7 +747,7 @@ def update_repayment():
         update_result = db.loans.update_one(
             {"loanId": loan_id},
             {"$set": {"totalPayable": str(total_payable),"totalPaid":str(total_paid),
-                      "totalAmountDue":total_amount_due}}
+                      "totalAmountDue":str(total_amount_due)}}
         )
         if result.matched_count == 0:
             return jsonify({
