@@ -5,4 +5,4 @@ flask-cors
 pytz
 twilio
 dotenv
-dateutil
+python-dateutil
