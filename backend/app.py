@@ -853,10 +853,11 @@ def dashboard_stats():
                 }
             ])
         stats = next(repayment_stats, {})
-        total_count = stats.get("total", [{}])[0].get("totalCount", 0)
-        paid_data = stats.get("paid", [{}])[0]
+        paid_data_list = stats.get("paid", [])
+        paid_data = paid_data_list[0] if paid_data_list else {}
         paid_count = paid_data.get("paidCount", 0)
-        repayment_rate = round((paid_count / total_count) * 100, 2) if total_count else 0
+        total_data_list = stats.get("total", [])
+        total_count = total_data_list[0].get("totalCount", 0) if total_data_list else 0
 
         # Interest collected
         interest_data = db.repayments.aggregate([
@@ -899,6 +900,7 @@ def dashboard_stats():
         ]))
         defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
         total_overdue = round(sum(d["overdueAmount"] for d in defaulters), 2)
+        repayment_rate = round((paid_count / total_count) * 100, 2) if total_count else 0
 
         # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
