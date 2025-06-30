@@ -113,10 +113,14 @@ const LoanRepayments = () => {
                 <InfoItem
                   icon={BadgeDollarSign}
                   label="Total Amount Paid"
-                  value={`₹${parseFloat(
-                    loanDetails.totalPaid
-                  ).toLocaleString("en-IN")}`}
+                  value={`₹${loanDetails.totalPaid ? parseFloat(loanDetails?.totalPaid).toLocaleString("en-IN") : 0}`}
                   valueClass="text-green-500"
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="Current Due"
+                  value={`₹${parseFloat(loanDetails?.totalAmountDue).toLocaleString("en-IN")}`}
+                  valueClass="text-[#ff2b36]"
                 />
               </div>
             </div>

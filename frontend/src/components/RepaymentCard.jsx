@@ -3,20 +3,29 @@ import moment from "moment-timezone";
 import { useForm } from "react-hook-form";
 import Loader from "./Loader";
 
-const RepaymentCard = ({ repayment, onUpdateSuccess, updateLoans, hpNumber }) => {
+const RepaymentCard = ({
+  repayment,
+  onUpdateSuccess,
+  updateLoans,
+  hpNumber,
+}) => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // console.log(repayment)
   const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
       loanId: repayment?.loanId,
       installmentNumber: repayment?.installmentNumber,
       amountDue: repayment?.amountDue,
       amountPaid: repayment?.amountPaid,
-      totalAmountDue: parseFloat(parseFloat(repayment?.amountDue) + parseFloat(repayment?.penalty)),
+      totalAmountDue: parseFloat(
+        parseFloat(repayment?.amountDue) + parseFloat(repayment?.penalty)
+      ),
       recoveryAgent: repayment?.recoveryAgent || false,
       status: repayment?.status,
       paymentMode: repayment?.paymentMode || "-",
+      penalty: repayment?.penalty,
     },
   });
 
@@ -38,7 +47,7 @@ const RepaymentCard = ({ repayment, onUpdateSuccess, updateLoans, hpNumber }) =>
       {
         method: "POST",
         headers: {
-          'x-api-key': 'marikambafinance@123',
+          "x-api-key": "marikambafinance@123",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
@@ -48,35 +57,36 @@ const RepaymentCard = ({ repayment, onUpdateSuccess, updateLoans, hpNumber }) =>
     console.log(result);
   };
 
-  const handleCheckboxChange = ()=>{
-    if(editMode){
-      setValue("recoveryAgent", !watch("recoveryAgent"))
-      
-      if(watch("recoveryAgent")){ 
-        const totalAmount = parseFloat(watch("totalAmountDue")) + 500;
-        setValue("totalAmountDue", totalAmount)
-        if(watch("status") === "paid"){
-          setValue("amountPaid", totalAmount);
-        }
-      }else{
-        const totalAmount = parseFloat(watch("totalAmountDue")) - 500;
-        setValue("totalAmountDue", totalAmount)
-        if(watch("status") === "paid"){
-          setValue("amountPaid", totalAmount);
-        }
+  const handleCheckboxChange = () => {
+    if (editMode) {
+      const isAgent = !watch("recoveryAgent");
+      setValue("recoveryAgent", isAgent);
+
+      const currentPenalty = parseFloat(watch("penalty")) || 0;
+      const penalty = isAgent ? currentPenalty + 500 : currentPenalty - 500;
+      setValue("penalty", penalty);
+
+      const baseAmountDue = parseFloat(watch("amountDue")) || 0;
+      const totalAmount = baseAmountDue + penalty;
+      setValue("totalAmountDue", totalAmount);
+
+      if (watch("status") === "paid") {
+        setValue("amountPaid", totalAmount);
       }
     }
-  }
+  };
 
   useEffect(() => {
     reset({
       loanId: repayment?.loanId,
       installmentNumber: repayment?.installmentNumber,
       amountPaid: repayment?.amountPaid,
+      amountDue: repayment?.amountDue,
       totalAmountDue: repayment?.totalAmountDue,
       recoveryAgent: repayment?.recoveryAgent || false,
       status: repayment?.status,
       paymentMode: repayment?.paymentMode || "-",
+      penalty: repayment?.penalty,
     });
   }, [repayment, reset]);
 
@@ -119,19 +129,27 @@ const RepaymentCard = ({ repayment, onUpdateSuccess, updateLoans, hpNumber }) =>
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Amount Due</span>
-          <span>₹{parseFloat(repayment?.amountDue).toLocaleString("en-IN")}</span>
+          <input type="hidden" {...register("amountDue")} />
+          <span>
+            ₹{parseFloat(watch("amountDue") || 0).toLocaleString("en-IN")}
+          </span>
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Amount Paid</span>
-          <span>₹{parseFloat(watch("amountPaid")).toLocaleString("en-IN")}</span>
+          <span>
+            ₹{parseFloat(watch("amountPaid")).toLocaleString("en-IN")}
+          </span>
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Penalty</span>
-          <span>₹{repayment?.penalty}</span>
+          <input type="hidden" {...register("penalty")} />
+          <span>₹{parseFloat(watch("penalty")).toLocaleString("en-IN")}</span>
         </div>
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Total Amount Due</span>
-          <span>₹{parseFloat(watch("totalAmountDue")).toLocaleString("en-IN")}</span>
+          <span>
+            ₹{parseFloat(watch("totalAmountDue")).toLocaleString("en-IN")}
+          </span>
         </div>
 
         {/* STATUS */}
@@ -188,8 +206,8 @@ const RepaymentCard = ({ repayment, onUpdateSuccess, updateLoans, hpNumber }) =>
             {...register("recoveryAgent")}
             checked={watch("recoveryAgent")}
             onChange={handleCheckboxChange}
-            onClick={(e)=> {
-              if(editMode === false){
+            onClick={(e) => {
+              if (editMode === false) {
                 e.preventDefault();
               }
             }}

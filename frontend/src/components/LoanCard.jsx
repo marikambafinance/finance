@@ -41,7 +41,7 @@ const LoanCard = ({ loan }) => {
           </div>
           <div className="flex flex-col">
             <span className="text-[11px] text-gray-400 uppercase tracking-widest">Total Amount Paid</span>
-            <span className="text-base font-medium text-green-400">₹{loan.totalPaid ? parseFloat(loan.totalPaid).toLocaleString("en-IN") : ""}</span>
+            <span className="text-base font-medium text-green-400">₹{loan.totalPaid ? parseFloat(loan.totalPaid).toLocaleString("en-IN") : 0}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-[11px] text-gray-400 uppercase tracking-widest">Missed Repayment Count</span>
