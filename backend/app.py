@@ -758,7 +758,7 @@ def update_repayment():
                         }
                     }
                 ])
-        data = next(result, None)
+        data = next(loan_res, None)
         total_payable = round(data["totalPayable"], 2)
         update_result = db.loans.update_one(
             {"loanId": loan_id},
