@@ -86,11 +86,24 @@ def generate_loan_id(customer_id):
         
 def create_repayment_schedule(loan_id, customer_id, months, emi):
     try:
+        # Fetch loan to get loanAmount and interestRate
+        loan = db.loans.find_one({"loanId": loan_id})
+        if not loan:
+            return {"status": "error", "message": f"Loan {loan_id} not found."}
+
+        loan_amount = float(loan.get("loanAmount", 0))
+        interest_rate = float(loan.get("interestRate", 0))  # percentage
+        tenure = int(months)
+
+        # Calculate flat monthly interest
+        monthly_interest = round((loan_amount * interest_rate) / (100 * tenure), 2)
+
         start_date = datetime.now(ZoneInfo("Asia/Kolkata")).replace(hour=0, minute=0, second=0, microsecond=0)
         repayment_entries = []
 
-        for i in range(int(months)):
-            due_date = start_date + relativedelta(months=i + 1)  # Add i+1 months accurately
+        for i in range(tenure):
+            due_date = start_date + relativedelta(months=i + 1)
+
             repayment_entries.append({
                 "loanId": loan_id,
                 "hpNumber": customer_id,
@@ -104,12 +117,13 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "paymentMode": None,
                 "penalty": 0,
                 "totalAmountDue": emi,
+                "interestAmount": monthly_interest,
                 "updatedOn": None
             })
 
         result = db.repayments.insert_many(repayment_entries)
         return {"status": "success", "insertedCount": len(result.inserted_ids)}
-    
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
     
@@ -845,17 +859,8 @@ def dashboard_stats():
         repayment_rate = round((paid_count / total_count) * 100, 2) if total_count else 0
 
         # Interest collected
-        interest_data = db.loans.aggregate([
-            {
-                "$lookup": {
-                    "from": "repayments",
-                    "localField": "loanId",
-                    "foreignField": "loanId",
-                    "as": "repayments"
-                }
-            },
-            {"$unwind": "$repayments"},
-            {"$match": {"repayments.status": "paid"}},
+        interest_data = db.repayments.aggregate([
+            {"$match": {"status": "paid"}},
             {
                 "$group": {
                     "_id": None,
