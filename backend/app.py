@@ -22,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 #load_dotenv() 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
 EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
