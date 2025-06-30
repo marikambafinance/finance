@@ -11,7 +11,7 @@ const useCustomerUpdate = ()=>{
             body: JSON.stringify(data)
         })
         const result = await res.json();
-        console.log(result)
+        return result;
     }
 
     return {updateCustomerData}

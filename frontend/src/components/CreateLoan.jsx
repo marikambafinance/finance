@@ -135,15 +135,13 @@ const CreateLoanPage = () => {
 
           <div>
             <label className="block mb-1">
-              Interest Rate: {watch("interestRate")}%
+              Interest Rate
             </label>
             <input
-              type="range"
-              min="0"
-              max="30"
-              step="0.1"
+              placeholder="Interest Rate"
+              type="number"
               {...register("interestRate")}
-              className="w-full accent-teal-400"
+              className="p-2 rounded bg-gray-700 w-full"
             />
           </div>
 

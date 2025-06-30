@@ -16,6 +16,7 @@ const AddCustomer = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
+    console.log(data)
     setLoading(true);
 
     try {
@@ -119,18 +120,51 @@ const AddCustomer = () => {
             />
           </div>
           <div>
+            <label className="block mb-1">Vehicle Make</label>
+            <input
+              type="text"
+              placeholder="Ex: Hero, Yamaha"
+              {...register("vehicleMake", {
+                required: "Vehicle Make is required",
+              })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors.vehicleMake && (
+              <p className="text-red-400 text-sm">
+                {errors.vehicleMake.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block mb-1">Vehicle Model</label>
+            <input
+              type="number"
+              placeholder="Ex: 2016"
+              {...register("vehicleModel", {
+                required: "Vehicle Model is required",
+              })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors.vehicleModel && (
+              <p className="text-red-400 text-sm">
+                {errors.vehicleModel.message}
+              </p>
+            )}
+          </div>
+          <div>
             <label className="block mb-1">Vehicle Number</label>
             <input
               type="text"
+              placeholder="Ex: KA01BR1234"
               {...register("vehicleNumber")}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
           </div>
           <div>
-            <label className="block mb-1">Chasis Number</label>
+            <label className="block mb-1">Chassis Number</label>
             <input
               type="text"
-              {...register("chasisNumber")}
+              {...register("chassisNumber")}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
           </div>
@@ -144,6 +178,22 @@ const AddCustomer = () => {
             />
             {errors.phone && (
               <p className="text-red-400 text-sm">{errors.phone.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1">Engine Number</label>
+            <input
+              type="text"
+              {...register("engineNumber", {
+                required: "Engine Number is required",
+              })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors.engineNumber && (
+              <p className="text-red-400 text-sm">
+                {errors.engineNumber.message}
+              </p>
             )}
           </div>
 
@@ -214,6 +264,56 @@ const AddCustomer = () => {
               {...register("annualIncome")}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
+          </div>
+          <div className="md:col-span-2">
+            <h2 className="text-2xl font-bold text-teal-300 w-fit border-b-2 mb-2">
+              Guarantor Details
+            </h2>
+          </div>
+
+          <div>
+            <label className="block mb-1">First Name</label>
+            <input
+              {...register("guarantor.firstName", {
+                required: "First Name is required",
+              })}
+              type="text"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors?.guarantor?.firstName && (
+              <p className="text-red-400 text-sm">
+                {errors.guarantor.firstName.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1">Last Name</label>
+            <input
+              {...register("guarantor.lastName")}
+              type="text"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Phone Number</label>
+            <input
+              type="tel"
+              {...register("guarantor.phone", { required: "Phone is required" })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors?.guarantor?.phone && (
+              <p className="text-red-400 text-sm">{errors.guarantor.phone.message}</p>
+            )}
+          </div>
+          <div className="md:col-span-2">
+            <label className="block mb-1">Address</label>
+            <textarea
+              rows="2"
+              {...register("guarantor.address")}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            ></textarea>
           </div>
 
           <div className="md:col-span-2 text-center mt-4">
