@@ -14,14 +14,15 @@ from twilio.rest import Client
 import time
 import pymongo
 import hashlib
+from dateutil.relativedelta import relativedelta
 #from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
-#load_dotenv()
-mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+#load_dotenv() 
+#mongo_uri=os.getenv("MONGO_URI")
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
@@ -83,13 +84,14 @@ def generate_loan_id(customer_id):
         if not loans.find_one({"loanId":loan_id}):
             return loan_id
         
-def create_repayment_schedule(loan_id, customer_id, months,emi):
-    start_date = datetime.now(ZoneInfo("Asia/Kolkata"))
+def create_repayment_schedule(loan_id, customer_id, months, emi):
     try:
+        start_date = datetime.now(ZoneInfo("Asia/Kolkata")).replace(hour=0, minute=0, second=0, microsecond=0)
+        repayment_entries = []
+
         for i in range(int(months)):
-            due_date = start_date + timedelta(days=30 * (i + 1))  # Approx 1 month intervals
-            print(i)
-            entry = {
+            due_date = start_date + relativedelta(months=i + 1)  # Add i+1 months accurately
+            repayment_entries.append({
                 "loanId": loan_id,
                 "hpNumber": customer_id,
                 "installmentNumber": i + 1,
@@ -98,16 +100,18 @@ def create_repayment_schedule(loan_id, customer_id, months,emi):
                 "amountPaid": 0,
                 "status": "pending",
                 "paymentDate": None,
-                "paymentId":None,
-                "paymentMode":None,
-                "penalty":0,
-                "totalAmountDue":emi,
-                "updatedOn":None
-                        }
-            result = db.repayments.insert_one(entry)
-            print(result)
+                "paymentId": None,
+                "paymentMode": None,
+                "penalty": 0,
+                "totalAmountDue": emi,
+                "updatedOn": None
+            })
+
+        result = db.repayments.insert_many(repayment_entries)
+        return {"status": "success", "insertedCount": len(result.inserted_ids)}
+    
     except Exception as e:
-        return {"status":"error","message":str(e)}
+        return {"status": "error", "message": str(e)}
     
 
 
@@ -430,38 +434,25 @@ def serialize_doc(doc):
     doc["_id"] = str(doc["_id"])
     return doc
 
-def close_loan_if_fully_paid(loan_id):
+def close_loan_if_fully_paid(loan_id, installment_number):
     try:
-        # Count total and paid repayments for this loan
-        summary = db.repayments.aggregate([
-            { "$match": { "loanId": loan_id } },
-            { "$group": {
-                "_id": "$loanId",
-                "total": { "$sum": 1 },
-                "paid": {
-                    "$sum": {
-                        "$cond": [{ "$eq": ["$status", "paid"] }, 1, 0]
-                    }
-                }
-            }}
-        ])
+        # Count how many repayment records exist for this loanId
+        actual_installments = db.repayments.count_documents({"loanId": loan_id})
 
-        summary = list(summary)
-        if summary and summary[0]["total"] == summary[0]["paid"]:
-            # All repayments are paid → close the loan
+        if actual_installments == int(installment_number):
             result = db.loans.update_one(
-                { "loanId": loan_id, "status": { "$ne": "closed" } },
-                { "$set": { "status": "closed" } }
+                {"loanId": loan_id, "status": {"$ne": "closed"}},
+                {"$set": {"status": "closed"}}
             )
             return {
                 "status": "success",
                 "message": f"Loan {loan_id} marked as closed." if result.modified_count else "Loan already closed."
             }
-
-        return {
-            "status": "success",
-            "message": f"Loan {loan_id} is not fully paid yet."
-        }
+        else:
+            return {
+                "status": "success",
+                "message": f"Loan {loan_id} is not complete yet. Only {actual_installments}/{installment_number} installments present."
+            }
 
     except Exception as e:
         return {
@@ -604,6 +595,13 @@ def get_all_customers_loans():
 def submit_loan():
     try:
         data = request.get_json(force=True)
+        if "hpNumber" in data.keys():
+            validation = db.customers.find_one({"hpNumber":data["hpNumber"]})
+        
+        if validation is None:
+            # Customer not found
+            return jsonify({"status": "error", "message": "Customer not found"}),404
+                
         res = insert_loan_data(data)
         
         #print(result)
@@ -706,40 +704,66 @@ def get_loans_with_repayments():
 @app.route("/update_repayment",methods=["POST","OPTIONS"])
 def update_repayment():
     data = request.get_json(force=True)
-    required_keys ={"amountPaid", "status","paymentMode","recoveryAgent","totalAmountDue","loanId","installmentNumber"}
+    required_keys = {
+        "amountPaid", "status", "paymentMode", "recoveryAgent",
+        "totalAmountDue", "loanId", "installmentNumber"
+    }
+
+    missing_keys = required_keys - data.keys()
+    if missing_keys:
+        return jsonify({
+            "status": "error",
+            "message": f"The following keys are missing: {', '.join(missing_keys)}"
+        }), 400
+
+    # Extract and clean inputs
+    loan_id = data["loanId"].strip()
+    installment_number = int(data["installmentNumber"])
+    amount_paid = data["amountPaid"]
+    status = data["status"]
+    payment_mode = data["paymentMode"]
+    recovery_agent = data["recoveryAgent"]
+    total_amount_due = float(data["totalAmountDue"])  # convert to float if stored as numeric in DB
+
     try:
-        if required_keys.issubset(data):
-            result = db.repayments.update_one( {
-                                                "loanId": data.get("loanId").strip(),
-                                                "installmentNumber": int(data.get("installmentNumber"))
-                                            },
-                                            {
-                                                "$set": {
-                                                    "amountPaid": data.get("amountPaid"),
-                                                    "status": data.get("status"),
-                                                    "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
-                                                    "paymentId": generate_unique_payment_id(),
-                                                    "paymentMode": data.get("paymentMode"),
-                                                    "recoveryAgent": data.get("recoveryAgent"),
-                                                    "totalAmountDue": data.get("totalAmountDue")
-                                                }
-                                            }
-                                        )
-            if result.matched_count == 0:
-                return jsonify({"status":"error","message":"No document matched the query. Check loanId or installmentNumber."}),400
-            elif result.modified_count == 0:
-                return jsonify({"status":"error","message":"Document matched but no fields were updated (values may be the same)."}),400
-            else:
-                close_loan_if_fully_paid(data.get("loanId").strip())
-                return jsonify({"status":"success","message":"Repayment DB updated successfully"}),200
+        result = db.repayments.update_one(
+            {"loanId": loan_id, "installmentNumber": installment_number},
+            {"$set": {
+                "amountPaid": amount_paid,
+                "status": status,
+                "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
+                "paymentId": generate_unique_payment_id(),
+                "paymentMode": payment_mode,
+                "recoveryAgent": recovery_agent,
+                "totalAmountDue": total_amount_due
+            }}
+        )
 
-        else:   
-            missing = required_keys - data.keys()
-            return jsonify({"status":"error","message":f"The following keys are missing: {missing}"}),404
+        if result.matched_count == 0:
+            return jsonify({
+                "status": "error",
+                "message": "No document matched the query. Check loanId or installmentNumber."
+            }), 404
 
-        
+        if result.modified_count == 0:
+            return jsonify({
+                "status": "warning",
+                "message": "Document matched but no fields were updated (values may be the same)."
+            }), 200  # not an error, just informational
+
+        # Optional post-update logic
+        close_loan_if_fully_paid(loan_id,installment_number)
+
+        return jsonify({
+            "status": "success",
+            "message": "Repayment DB updated successfully"
+        }), 200
+
     except Exception as e:
-        return jsonify({"status":"error","message":str(e)}),500
+        return jsonify({
+            "status": "error",
+            "message": f"Internal server error: {str(e)}"
+        }), 500
     
 
 @app.route("/update_customer",methods=["POST","OPTIONS"])
@@ -767,12 +791,10 @@ def update_customer():
 @app.route("/dashboard-stats", methods=["GET","OPTIONS"])
 def dashboard_stats():
     try:
-        today = datetime.now()
-        first_of_month = today.replace(day=1)
+        today = datetime.now(ZoneInfo("Asia/Kolkata"))
+        first_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        # Totals
-        total_customers = db.customers.count_documents({})
-
+        # Totals and Loan Aggregates
         loan_stats = db.loans.aggregate([
             {
                 "$group": {
@@ -786,34 +808,44 @@ def dashboard_stats():
         ])
         loan_data = next(loan_stats, {})
 
+        # Repayment Aggregates
         repayment_stats = db.repayments.aggregate([
-            {"$match": {"status": "paid"}},
-            {
-                "$group": {
-                    "_id": None,
-                    "amountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
-                    "paidCount": {"$sum": 1}
+                {
+                    "$facet": {
+                        "total": [
+                            {"$count": "totalCount"}
+                        ],
+                        "paid": [
+                            {"$match": {"status": "paid"}},
+                            {
+                                "$group": {
+                                    "_id": None,
+                                    "amountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
+                                    "paidCount": {"$sum": 1},
+                                    "penaltyAmount": {"$sum": {"$toDouble": "$penalty"}},
+                                    "recoveryCount": {
+                                        "$sum": {
+                                            "$cond": [
+                                                {"$eq": ["$recoveryAgent", True]},
+                                                1,
+                                                0
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
                 }
-            }
-        ])
-        repayment_data = next(repayment_stats, {})
-
-        total_repayments_stats = db.repayments.aggregate([
-            {
-                "$group": {
-                    "_id": None,
-                    "totalCount": {"$sum": 1}
-                }
-            }
-        ])
-        total_repayments_data = next(total_repayments_stats, {"totalCount": 0})
-
-        total_count = total_repayments_data.get("totalCount", 0)
-        paid_count = repayment_data.get("paidCount", 0)
+            ])
+        stats = next(repayment_stats, {})
+        total_count = stats.get("total", [{}])[0].get("totalCount", 0)
+        paid_data = stats.get("paid", [{}])[0]
+        paid_count = paid_data.get("paidCount", 0)
         repayment_rate = round((paid_count / total_count) * 100, 2) if total_count else 0
 
-        # Interest collected from loans with paid repayments
-        interest_stats = db.loans.aggregate([
+        # Interest collected
+        interest_data = db.loans.aggregate([
             {
                 "$lookup": {
                     "from": "repayments",
@@ -822,6 +854,7 @@ def dashboard_stats():
                     "as": "repayments"
                 }
             },
+            {"$unwind": "$repayments"},
             {"$match": {"repayments.status": "paid"}},
             {
                 "$group": {
@@ -830,39 +863,22 @@ def dashboard_stats():
                 }
             }
         ])
-        interest_data = next(interest_stats, {"interestCollected": 0})
-
-        # Penalty and Recovery agent fees
-        penalty_stats = db.repayments.aggregate([
-            {"$match": {"status": "paid"}},
-            {
-                "$group": {
-                    "_id": None,
-                    "penaltyAmount": {"$sum": {"$toDouble": "$penalty"}},
-                    "recoveryCount": {"$sum": {"$cond": [{"$eq": ["$recoveryAgent", True]}, 1, 0]}}
-                }
-            },
-            {
-                "$project": {
-                    "penaltyAmount": 1,
-                    "recoveryAgentAmount": {"$multiply": ["$recoveryCount", 500]}
-                }
-            }
-        ])
-        penalty_data = next(penalty_stats, {"penaltyAmount": 0, "recoveryAgentAmount": 0})
+        interest = next(interest_data, {"interestCollected": 0})
 
         # Recent
         new_customers = db.customers.count_documents({"InsertedOn": {"$gte": first_of_month}})
-        repayments_this_month = db.repayments.count_documents({"status": "paid", "paymentDate": {"$gte": first_of_month}})
+        repayments_this_month = db.repayments.count_documents({
+            "status": "paid",
+            "paymentDate": {"$gte": first_of_month}
+        })
 
         # Repeat and active customers
-        repeat_customers = db.loans.aggregate([
+        repeat = db.loans.aggregate([
             {"$group": {"_id": "$hpNumber", "count": {"$sum": 1}}},
             {"$match": {"count": {"$gt": 1}}},
             {"$count": "repeatCount"}
         ])
-        repeat_count = next(repeat_customers, {}).get("repeatCount", 0)
-
+        repeat_count = next(repeat, {}).get("repeatCount", 0)
         active_customers = len(db.loans.distinct("hpNumber", {"status": "active"}))
 
         # Defaulters
@@ -876,28 +892,26 @@ def dashboard_stats():
                 }
             }
         ]))
-
         defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
         total_overdue = round(sum(d["overdueAmount"] for d in defaulters), 2)
 
-        # Calculate averages
+        # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
         amount_issued = loan_data.get("amountIssued", 0)
-
         avg_loan = round(amount_issued / total_loans, 2) if total_loans else 0
 
         return jsonify({
             "status": "success",
             "totals": {
-                "customers": total_customers,
+                "customers": db.customers.count_documents({}),
                 "loans": total_loans,
                 "activeLoans": loan_data.get("activeLoans", 0),
                 "closedLoans": loan_data.get("closedLoans", 0),
                 "amountIssued": round(amount_issued, 2),
-                "amountReceived": round(repayment_data.get("amountReceived", 0), 2),
-                "interestCollected": round(interest_data.get("interestCollected", 0), 2),
-                "penaltyAmount": round(penalty_data.get("penaltyAmount", 0), 2),
-                "recoveryAgentAmount": penalty_data.get("recoveryAgentAmount", 0)
+                "amountReceived": round(paid_data.get("amountReceived", 0), 2),
+                "interestCollected": round(interest.get("interestCollected", 0), 2),
+                "penaltyAmount": round(paid_data.get("penaltyAmount", 0), 2),
+                "recoveryAgentAmount": paid_data.get("recoveryCount", 0) * 500
             },
             "averages": {
                 "loanSize": avg_loan,
@@ -923,8 +937,6 @@ def dashboard_stats():
                 ]
             }
         })
-
-
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
