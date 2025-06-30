@@ -688,7 +688,7 @@ def update_repayment():
     data = request.get_json(force=True)
     required_keys = {
         "amountPaid", "status", "paymentMode", "recoveryAgent",
-        "totalAmountDue", "loanId", "installmentNumber"
+        "totalAmountDue", "loanId", "installmentNumber","penalty"
     }
 
     missing_keys = required_keys - data.keys()
@@ -706,7 +706,7 @@ def update_repayment():
     payment_mode = data["paymentMode"]
     recovery_agent = data["recoveryAgent"]
     total_amount_due = float(data["totalAmountDue"])  # convert to float if stored as numeric in DB
-
+    penalty = str(data["penalty"])
     try:
         
         result = db.repayments.update_one(
@@ -718,7 +718,8 @@ def update_repayment():
                 "paymentId": generate_unique_payment_id(),
                 "paymentMode": payment_mode,
                 "recoveryAgent": recovery_agent,
-                "totalAmountDue": str(total_amount_due)
+                "totalAmountDue": str(total_amount_due),
+                "penalty" : penalty
             }}
         )
         loan_res = db.repayments.aggregate([
