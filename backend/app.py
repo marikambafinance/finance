@@ -116,7 +116,8 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "paymentId": None,
                 "paymentMode": None,
                 "penalty": 0,
-                "totalpenalty":0,
+                "totalPenalty":0,
+                "recoveryAgentAmount":0,
                 "totalAmountDue": str(emi),
                 "interestAmount": str(monthly_interest),
                 "updatedOn": None
@@ -739,7 +740,7 @@ def update_repayment():
     data = request.get_json(force=True)
     required_keys = {
         "amountPaid", "status", "paymentMode", "recoveryAgent",
-        "totalAmountDue", "loanId", "installmentNumber","penalty"
+        "totalAmountDue", "loanId", "installmentNumber","penalty","totalPenalty"
     }
 
     missing_keys = required_keys - data.keys()
@@ -759,6 +760,7 @@ def update_repayment():
     total_amount_due = float(data["totalAmountDue"])  # convert to float if stored as numeric in DB
     penalty = str(data["penalty"])
     totalPenalty = str(data["totalPenalty"])
+    recoveryAgentAmount = str(data["recoveryAgentAmount"])
     try:
         
         result = db.repayments.update_one(
@@ -772,7 +774,8 @@ def update_repayment():
                 "recoveryAgent": recovery_agent,
                 "totalAmountDue": str(total_amount_due),
                 "penalty" : penalty,
-                "totalPenalty":totalPenalty
+                "totalPenalty":totalPenalty,
+                "recoveryAgentAmount":recoveryAgentAmount
             }}
         )
         loan_res = db.repayments.aggregate(           [
