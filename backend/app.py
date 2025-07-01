@@ -22,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 #load_dotenv() 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient(mongo_uri)
+client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client.users
 collection = db.customers
 EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
@@ -684,9 +684,10 @@ def get_repayment_info():
         return jsonify({"error": "loan_id is required"}), 400
     loan_id = data.get("loanId")
     try:
-        results = db.repayments.find({"loanId": loan_id})
-        serialized_repayments = [serialize_doc(doc) for doc in results]
-        return jsonify({"repayment_data":serialized_repayments,"status":"success"}),200
+        results = list(db.repayments.find({"loanId": loan_id}))
+        response = [serialize_doc(doc) for doc in results]
+        response.sort(key= lambda x: x["installmentNumber"])
+        return jsonify({"repayment_data":response,"status":"success"}),200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -771,24 +772,42 @@ def update_repayment():
                 "penalty" : penalty
             }}
         )
-        loan_res = db.repayments.aggregate([
-            { "$match": { "loanId": loan_id } },
-            {
-                "$group": {
-                    "_id": "$loanId",
-                    "totalPayable": { "$sum": { "$toDouble": "$totalAmountDue" } },
-                    "totalPaid": {
-                        "$sum": {
-                            "$cond": [
-                                { "$eq": ["$status", "paid"] },
-                                { "$toDouble": "$amountPaid" },
-                                0
+        loan_res = db.repayments.aggregate(           [
+                    { "$match": { "loanId": loan_id } },
+                    
+                    {
+                        "$group": {
+            "_id": "$loanId",
+            
+            "totalPayable": {
+                "$sum": {
+                    "$cond": {
+                        "if": { "$ne": ["$status", "paid"] },
+                        "then": {
+                            "$add": [
+                                { "$toDouble": { "$ifNull": ["$totalAmountDue", 0] } },
+                                { "$toDouble": { "$ifNull": ["$penalty", 0] } }
                             ]
+                        },
+                        "else": {
+                            "$toDouble": { "$ifNull": ["$totalAmountDue", 0] }
                         }
                     }
                 }
+            },
+
+            "totalPaid": {
+                "$sum": {
+                    "$cond": [
+                        { "$eq": ["$status", "paid"] },
+                        { "$toDouble": { "$ifNull": ["$amountPaid", 0] } },
+                        0
+                    ]
+                }
             }
-        ])
+        }
+    }
+])
 
         data = next(loan_res, None)
         total_payable = round(data["totalPayable"], 2)
