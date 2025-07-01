@@ -22,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
 # MongoDB connection (replace with your actual credentials)
 #load_dotenv() 
 mongo_uri=os.getenv("MONGO_URI")
-client = MongoClient("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
 EXPECTED_API_KEY =os.getenv("EXPECTED_API_KEY")
@@ -116,6 +116,7 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "paymentId": None,
                 "paymentMode": None,
                 "penalty": 0,
+                "totalpenalty":0,
                 "totalAmountDue": str(emi),
                 "interestAmount": str(monthly_interest),
                 "updatedOn": None
@@ -757,6 +758,7 @@ def update_repayment():
     recovery_agent = data["recoveryAgent"]
     total_amount_due = float(data["totalAmountDue"])  # convert to float if stored as numeric in DB
     penalty = str(data["penalty"])
+    totalPenalty = str(data["totalPenalty"])
     try:
         
         result = db.repayments.update_one(
@@ -769,7 +771,8 @@ def update_repayment():
                 "paymentMode": payment_mode,
                 "recoveryAgent": recovery_agent,
                 "totalAmountDue": str(total_amount_due),
-                "penalty" : penalty
+                "penalty" : penalty,
+                "totalPenalty":totalPenalty
             }}
         )
         loan_res = db.repayments.aggregate(           [
@@ -786,7 +789,7 @@ def update_repayment():
                         "then": {
                             "$add": [
                                 { "$toDouble": { "$ifNull": ["$totalAmountDue", 0] } },
-                                { "$toDouble": { "$ifNull": ["$penalty", 0] } }
+                                { "$toDouble": { "$ifNull": ["$totalPenalty", 0] } }
                             ]
                         },
                         "else": {
