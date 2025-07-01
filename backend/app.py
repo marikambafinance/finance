@@ -210,6 +210,15 @@ def total_loan_payable(hpNumber):
                                     0
                                 ]
                             }
+                        },
+                         "monthsPaid": {
+                                "$sum": {
+                                    "$cond": [
+                                        { "$eq": ["$status", "paid"] },
+                                        1,
+                                        0
+                                ]
+                            }
                         }
                     }
                 }
@@ -237,6 +246,12 @@ def total_loan_payable(hpNumber):
                                 "latePaymentCount": {
                                     "$ifNull": [
                                         { "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] },
+                                        0
+                                    ]
+                                },
+                                "monthsPaid": {
+                                    "$ifNull": [
+                                        { "$arrayElemAt": ["$repayment_summary.monthsPaid", 0] },
                                         0
                                     ]
                                 }
