@@ -197,7 +197,6 @@ def apply_monthly_penalties_new():
                                 "updatedOn": current_date, # Set last update time
                                 "TotalPenaltyMonths": months,
                                 "penalty": penalty,
-                                "totalAmountDue": str(emi+penalty)
                                 }
                         }
                     }
