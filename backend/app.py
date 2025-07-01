@@ -148,26 +148,32 @@ def insert_customer(customer_data):
 
 def total_loan_payable(hpNumber):
     pipeline = [
-        { "$match": { "hpNumber": hpNumber } },  # Filter customer by hpNumber
+    # Match customer by hpNumber
+    { "$match": { "hpNumber": hpNumber } },
 
-        # Lookup loans for the customer
-        {
-            "$lookup": {
-                "from": "loans",
-                "localField": "hpNumber",
-                "foreignField": "hpNumber",
-                "as": "loans"
-            }
-        },
+    # Lookup loans
+    {
+        "$lookup": {
+            "from": "loans",
+            "localField": "hpNumber",
+            "foreignField": "hpNumber",
+            "as": "loanList"
+        }
+    },
 
-        # Unwind loans to process each individually
-        { "$unwind": { "path": "$loans", "preserveNullAndEmptyArrays": True } },
+    # Unwind loans (preserving customers with no loans)
+    {
+        "$unwind": {
+            "path": "$loanList",
+            "preserveNullAndEmptyArrays": True
+        }
+    },
 
-        # Lookup repayment stats per loan
-        {
+    # Lookup repayment stats if loan exists
+    {
         "$lookup": {
             "from": "repayments",
-            "let": { "loanId": "$loans.loanId" },
+            "let": { "loanId": "$loanList.loanId" },
             "pipeline": [
                 {
                     "$match": {
@@ -212,56 +218,77 @@ def total_loan_payable(hpNumber):
         }
     },
 
-        # Merge repayment stats into the loan object
-        {
-            "$addFields": {
-                "loans": {
-                    "$mergeObjects": [
-                        "$loans",
-                        {
-                            "missedCount": {
-                                "$ifNull": [
-                                    { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
-                                    0
-                                ]
-                            },
-                            "latePaymentCount": {
-                                "$ifNull": [
-                                    { "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] },
-                                    0
-                                ]
+    # Merge loan + repayment only if loan exists
+    {
+        "$addFields": {
+            "loanWithStats": {
+                "$cond": [
+                    { "$ne": ["$loanList", None] },
+                    {
+                        "$mergeObjects": [
+                            "$loanList",
+                            {
+                                "missedCount": {
+                                    "$ifNull": [
+                                        { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
+                                        0
+                                    ]
+                                },
+                                "latePaymentCount": {
+                                    "$ifNull": [
+                                        { "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] },
+                                        0
+                                    ]
+                                }
                             }
-                        }
+                        ]
+                    },
+                    None
+                ]
+            }
+        }
+    },
+
+    # Group back by customer
+    {
+        "$group": {
+            "_id": "$_id",
+            "customerDetails": {
+                "$first": {
+                    "firstName": "$firstName",
+                    "lastName": "$lastName",
+                    "phone": "$phone"
+                }
+            },
+            "data": {
+                "$push": {
+                    "$cond": [
+                        { "$ne": ["$loanWithStats", None] },
+                        "$loanWithStats",
+                        "$$REMOVE"
                     ]
                 }
             }
-        },
-
-        # Group loans back into a list under the customer
-        {
-            "$group": {
-                "_id": "$_id",
-                "customer": { "$first": "$$ROOT" },
-                "loans": { "$push": "$loans" }
-            }
-        },
-
-        # Replace root to flatten structure
-        {
-            "$replaceRoot": {
-                "newRoot": {
-                    "$mergeObjects": ["$customer", { "loans": "$loans" }]
-                }
-            }
-        },
-
-        # Remove repayment_summary from the result
-        {
-            "$project": {
-                "repayment_summary": 0
-            }
         }
-    ]
+    },
+
+    # Add status
+    {
+        "$addFields": {
+            "status": "success"
+        }
+    },
+
+    # Final shape
+    {
+        "$project": {
+            "_id": 0,
+            "customerDetails": 1,
+            "data": 1,
+            "status": 1
+        }
+    }
+]
     result = list(db.customers.aggregate(pipeline))[0]
     return result
 
@@ -669,7 +696,12 @@ def get_loans_with_repayments():
             else:
                 return doc 
         result = serialize(result)
+        if "loanId" in result["data"][0].keys():
+            pass
+        else:
+            result["data"]=[]
 
+        """
         return jsonify({
             "status": "success",
             "customerDetails": {
@@ -679,6 +711,8 @@ def get_loans_with_repayments():
             },
             "data": result.get("loans", [])
         })
+        """
+        return result
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
