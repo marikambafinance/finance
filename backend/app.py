@@ -764,6 +764,13 @@ def update_repayment():
     totalPenalty = str(data["totalPenalty"])
     recoveryAgentAmount = str(data["recoveryAgentAmount"])
     customPenalty = str(data["customPenalty"])
+    remianingPayment =str(data["remianingPayment"])
+    payment_id = generate_unique_payment_id()
+    if customPenalty and status=="partial":
+        new_amount_paid = db.repayments.find_one({"laonId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
+        amount_paid += new_amount_paid
+        if amount_paid==total_amount_due:
+            status="paid"
     try:
         
         result = db.repayments.update_one(
@@ -772,16 +779,27 @@ def update_repayment():
                 "amountPaid": str(amount_paid),
                 "status": status,
                 "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
-                "paymentId": generate_unique_payment_id(),
+                "paymentId": payment_id,
                 "paymentMode": payment_mode,
                 "recoveryAgent": recovery_agent,
                 "totalAmountDue": str(total_amount_due),
                 "penalty" : penalty,
                 "totalPenalty":totalPenalty,
                 "recoveryAgentAmount":recoveryAgentAmount,
-                "customPenalty": customPenalty
+                "customPenalty": customPenalty,
+                "remianingPayment":remianingPayment
+
             }}
         )
+        hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
+        update_ledger = db.ledger.insert_one({
+            "hpNumber":hpNumber,
+            "loanId":loan_id,
+            "paymentId":payment_id,
+            "paymentMode":payment_mode,
+            "amountPaid":new_amount_paid if new_amount_paid else amount_paid,
+        })
+
         loan_res = db.repayments.aggregate(           [
                     { "$match": { "loanId": loan_id } },
                     
