@@ -121,7 +121,8 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "customPenalty":0,
                 "totalAmountDue": str(emi),
                 "interestAmount": str(monthly_interest),
-                "updatedOn": None
+                "updatedOn": None,
+                "remainingPayment":str(emi)
             })
 
         result = db.repayments.insert_many(repayment_entries)
@@ -752,7 +753,11 @@ def update_repayment():
             "status": "error",
             "message": f"The following keys are missing: {', '.join(missing_keys)}"
         }), 400
-
+    if (float(data.get("totalAmountDue",0)<=float(data.get("amountPaid",0)))):
+        return jsonify({
+            "status": "error",
+            "message": f"Payment was already made, Unable to update"
+        }), 200
     # Extract and clean inputs
     loan_id = data["loanId"].strip()
     installment_number = int(data["installmentNumber"])
@@ -798,7 +803,7 @@ def update_repayment():
         )
         hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
         update_ledger = db.ledger.insert_one({
-            "hpNumber":hpNumber,
+            "hpNumber":hpNumber["hpNumber"],
             "loanId":loan_id,
             "paymentId":payment_id,
             "paymentMode":payment_mode,
