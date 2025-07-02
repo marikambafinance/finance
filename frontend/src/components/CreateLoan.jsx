@@ -154,10 +154,10 @@ const CreateLoanPage = () => {
               <option value="">Select Loan Term</option>
               <option value="3">3 Months</option>
               <option value="6">6 Months</option>
+              <option value="10">10 Months</option>
               <option value="12">12 Months</option>
               <option value="24">24 Months</option>
-              <option value="36">36 Months</option>
-              <option value="48">48 Months</option>
+              <option value="36">36 Months</option>              
             </select>
             {errors.loanTerm && (
               <p className="text-red-400 text-sm mt-1">

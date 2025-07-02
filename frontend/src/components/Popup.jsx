@@ -12,7 +12,7 @@ const Popup = () => {
           className={`rounded-lg shadow-lg p-6 text-center w-80 ${
             type === "success"
               ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
+              : "bg-[#e9e9e9] text-red-800"
           }`}
         >
           <div className="text-4xl mb-2 flex items-center justify-center">

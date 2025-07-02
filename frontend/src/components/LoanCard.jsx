@@ -37,7 +37,7 @@ const LoanCard = ({ loan }) => {
           </div>
           <div className="flex flex-col">
             <span className="text-[11px] text-gray-400 uppercase tracking-widest">Months Paid</span>
-            <span className="text-base font-medium">{loan.paidCount} months</span>
+            <span className="text-base font-medium">{loan.monthsPaid} months</span>
           </div>
           <div className="flex flex-col">
             <span className="text-[11px] text-gray-400 uppercase tracking-widest">Total Amount Paid</span>

@@ -11,7 +11,6 @@ const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const { loanId, hpNumber } = useParams();
   const { loanList } = useLoanListContext();
-  console.log(loanList)
 
   const [loanDetails, setLoanDetails] = useState(null);
   const [repayments, setRepayments] = useState([]);
@@ -31,6 +30,7 @@ const LoanRepayments = () => {
         }
       );
       const data = await res.json();
+      console.log(data)
       setRepayments(data?.repayment_data || []);
     } catch (err) {
       console.error("Error fetching repayment data:", err);
