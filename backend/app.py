@@ -756,7 +756,7 @@ def update_repayment():
     # Extract and clean inputs
     loan_id = data["loanId"].strip()
     installment_number = int(data["installmentNumber"])
-    new_amount_paid = str(data["amountPaid"])
+    new_amount_paid = float(data["amountPaid"])
     status = data["status"]
     payment_mode = data["paymentMode"]
     recovery_agent = data["recoveryAgent"]
@@ -771,6 +771,7 @@ def update_repayment():
     if status=="partial":
         amount_paid = db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
         new_amount_paid+= float(amount_paid["amountPaid"])
+
         if (float(amount_paid["amountPaid"])>=total_amount_due ):
             status="paid"
     try:
