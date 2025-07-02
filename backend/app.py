@@ -772,7 +772,7 @@ def update_repayment():
         amount_paid = db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
         new_amount_paid+= float(amount_paid["amountPaid"])
 
-        if (float(amount_paid["amountPaid"])>=total_amount_due ):
+        if (new_amount_paid>=total_amount_due ):
             status="paid"
     try:
         
