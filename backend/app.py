@@ -742,7 +742,7 @@ def update_repayment():
     data = request.get_json(force=True)
     required_keys = {
         "amountPaid", "status", "paymentMode", "recoveryAgent",
-        "totalAmountDue", "loanId", "installmentNumber","penalty","totalPenalty","recoveryAgentAmount","customPenalty"
+        "totalAmountDue", "loanId", "installmentNumber","penalty","totalPenalty","recoveryAgentAmount","customPenalty","remainingPayment"
     }
 
     missing_keys = required_keys - data.keys()
@@ -764,12 +764,12 @@ def update_repayment():
     totalPenalty = str(data["totalPenalty"])
     recoveryAgentAmount = str(data["recoveryAgentAmount"])
     customPenalty = str(data["customPenalty"])
-    remianingPayment =str(data["remianingPayment"])
+    remainingPayment =str(data["remainingPayment"])
     payment_id = generate_unique_payment_id()
     if customPenalty and status=="partial":
         new_amount_paid = db.repayments.find_one({"laonId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
         amount_paid += new_amount_paid
-        if amount_paid==total_amount_due:
+        if (amount_paid>=total_amount_due ):
             status="paid"
     try:
         
@@ -787,7 +787,7 @@ def update_repayment():
                 "totalPenalty":totalPenalty,
                 "recoveryAgentAmount":recoveryAgentAmount,
                 "customPenalty": customPenalty,
-                "remianingPayment":remianingPayment
+                "remainingPayment":remainingPayment
 
             }}
         )
