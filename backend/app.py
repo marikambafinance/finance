@@ -742,7 +742,8 @@ def update_repayment():
     data = request.get_json(force=True)
     required_keys = {
         "amountPaid", "status", "paymentMode", "recoveryAgent",
-        "totalAmountDue", "loanId", "installmentNumber","penalty","totalPenalty","recoveryAgentAmount","customPenalty","remainingPayment"
+        "totalAmountDue", "loanId", "installmentNumber","penalty","totalPenalty","recoveryAgentAmount","customPenalty","remainingPayment",
+        "customPenaltyCheck"
     }
 
     missing_keys = required_keys - data.keys()
@@ -755,7 +756,7 @@ def update_repayment():
     # Extract and clean inputs
     loan_id = data["loanId"].strip()
     installment_number = int(data["installmentNumber"])
-    amount_paid = data["amountPaid"]
+    new_amount_paid = str(data["amountPaid"])
     status = data["status"]
     payment_mode = data["paymentMode"]
     recovery_agent = data["recoveryAgent"]
@@ -765,10 +766,11 @@ def update_repayment():
     recoveryAgentAmount = str(data["recoveryAgentAmount"])
     customPenalty = str(data["customPenalty"])
     remainingPayment =str(data["remainingPayment"])
+    customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
     if customPenalty and status=="partial":
-        new_amount_paid = db.repayments.find_one({"laonId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
-        amount_paid += new_amount_paid
+        amount_paid = db.repayments.find_one({"laonId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
+        new_amount_paid+= amount_paid
         if (amount_paid>=total_amount_due ):
             status="paid"
     try:
@@ -776,7 +778,7 @@ def update_repayment():
         result = db.repayments.update_one(
             {"loanId": loan_id, "installmentNumber": installment_number},
             {"$set": {
-                "amountPaid": str(amount_paid),
+                "amountPaid": str(new_amount_paid),
                 "status": status,
                 "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
                 "paymentId": payment_id,
@@ -787,7 +789,8 @@ def update_repayment():
                 "totalPenalty":totalPenalty,
                 "recoveryAgentAmount":recoveryAgentAmount,
                 "customPenalty": customPenalty,
-                "remainingPayment":remainingPayment
+                "remainingPayment":remainingPayment,
+                "customPenaltyCheck":customPenaltyCheck
 
             }}
         )
@@ -808,21 +811,10 @@ def update_repayment():
             "_id": "$loanId",
             
             "totalPayable": {
-                "$sum": {
-                    "$cond": {
-                        "if": { "$ne": ["$status", "paid"] },
-                        "then": {
-                            "$add": [
-                                { "$toDouble": { "$ifNull": ["$totalAmountDue", 0] } },
-                                { "$toDouble": { "$ifNull": ["$totalPenalty", 0] } }
-                            ]
-                        },
-                        "else": {
+                        "$sum": {
                             "$toDouble": { "$ifNull": ["$totalAmountDue", 0] }
                         }
-                    }
-                }
-            },
+                        },
 
             "totalPaid": {
                 "$sum": {
