@@ -807,7 +807,7 @@ def update_repayment():
             "loanId":loan_id,
             "paymentId":payment_id,
             "paymentMode":payment_mode,
-            "amountPaid":new_amount_paid if new_amount_paid else amount_paid,
+            "amountPaid":new_amount_paid if status!="partial" else new_amount_paid-float(amount_paid["amountPaid"]),
             "paymentDate":payment_date
         })
 
