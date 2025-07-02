@@ -768,8 +768,8 @@ def update_repayment():
     remainingPayment =str(data["remainingPayment"])
     customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
-    if customPenalty and status=="partial":
-        amount_paid = db.repayments.find_one({"laonId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
+    if status=="partial":
+        amount_paid = db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
         new_amount_paid+= float(amount_paid["amountPaid"])
         if (float(amount_paid["amountPaid"])>=total_amount_due ):
             status="paid"
@@ -818,11 +818,7 @@ def update_repayment():
 
             "totalPaid": {
                 "$sum": {
-                    "$cond": [
-                        { "$eq": ["$status", "paid"] },
-                        { "$toDouble": { "$ifNull": ["$amountPaid", 0] } },
-                        0
-                    ]
+                     "$toDouble": { "$ifNull": ["$amountPaid", 0] }
                 }
             }
         }
