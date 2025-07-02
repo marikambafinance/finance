@@ -118,7 +118,7 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "penalty": 0,
                 "totalPenalty":0,
                 "recoveryAgentAmount":0,
-                "customPenalty":None,
+                "customPenalty":0,
                 "totalAmountDue": str(emi),
                 "interestAmount": str(monthly_interest),
                 "updatedOn": None
@@ -760,14 +760,15 @@ def update_repayment():
     status = data["status"]
     payment_mode = data["paymentMode"]
     recovery_agent = data["recoveryAgent"]
-    total_amount_due = float(data["totalAmountDue"])  # convert to float if stored as numeric in DB
+    total_amount_due = float(data.get("totalAmountDue", 0)) # convert to float if stored as numeric in DB
     penalty = str(data["penalty"])
-    totalPenalty = str(data["totalPenalty"])
+    totalPenalty = data.get("totalPenalty",0)
     recoveryAgentAmount = str(data["recoveryAgentAmount"])
     customPenalty = str(data["customPenalty"])
     remainingPayment =str(data["remainingPayment"])
     customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
+    payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
     if status=="partial":
         amount_paid = db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
         new_amount_paid+= float(amount_paid["amountPaid"])
@@ -781,7 +782,7 @@ def update_repayment():
             {"$set": {
                 "amountPaid": str(new_amount_paid),
                 "status": status,
-                "paymentDate": datetime.now(ZoneInfo("Asia/Kolkata")),
+                "paymentDate": payment_date,
                 "paymentId": payment_id,
                 "paymentMode": payment_mode,
                 "recoveryAgent": recovery_agent,
@@ -802,6 +803,7 @@ def update_repayment():
             "paymentId":payment_id,
             "paymentMode":payment_mode,
             "amountPaid":new_amount_paid if new_amount_paid else amount_paid,
+            "paymentDate":payment_date
         })
 
         loan_res = db.repayments.aggregate(           [
