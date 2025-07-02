@@ -770,8 +770,8 @@ def update_repayment():
     payment_id = generate_unique_payment_id()
     if customPenalty and status=="partial":
         amount_paid = db.repayments.find_one({"laonId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
-        new_amount_paid+= amount_paid
-        if (amount_paid>=total_amount_due ):
+        new_amount_paid+= float(amount_paid["amountPaid"])
+        if (float(amount_paid["amountPaid"])>=total_amount_due ):
             status="paid"
     try:
         
