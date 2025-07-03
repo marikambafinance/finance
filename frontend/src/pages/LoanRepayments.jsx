@@ -1,20 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { User, Phone, BadgeDollarSign, ArrowLeft} from "lucide-react";
+import { User, Phone, BadgeDollarSign, ArrowLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import RepaymentCard from "../components/RepaymentCard";
 import Navbar from "../components/Navbar";
 import useLoanWithRepaymentsList from "../hooks/useLoanWithRepaymentsList";
 import { useLoanListContext } from "../context/LoanListContext";
 import Loader from "../components/Loader";
+import { useForm } from "react-hook-form";
+import Popup from "../components/Popup";
+import { usePopupContext } from "../context/PopupContext";
 
 const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const { loanId, hpNumber } = useParams();
   const { loanList } = useLoanListContext();
 
+  const [loading, setLoading] = useState(false);
+  const { setType, setMessage, setShowPopup } = usePopupContext();
+
   const [loanDetails, setLoanDetails] = useState(null);
   const [repayments, setRepayments] = useState([]);
   const navigate = useNavigate();
+
+  const { register, handleSubmit, reset } = useForm();
 
   const fetchRepaymentDetails = async () => {
     try {
@@ -30,11 +38,57 @@ const LoanRepayments = () => {
         }
       );
       const data = await res.json();
-      console.log(data)
+      console.log(data);
       setRepayments(data?.repayment_data || []);
     } catch (err) {
+      setShowPopup(true);
+      setType("error");
+      setMessage(err.message);
       console.error("Error fetching repayment data:", err);
     }
+  };
+
+  const handleAutoPayment = async (data) => {
+    try {
+      const res = await fetch(
+        "https://mariamma-finance.onrender.com/auto_update_repayments",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "marikambafinance@123",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      const result = await res.json();
+
+      if(!res.ok){
+        throw new Error(result?.message);        
+      }
+      setShowPopup(true);
+      setType(result?.status || "success");
+      setMessage(result?.message);
+      console.log(result);
+    } catch (error) {
+      setShowPopup(true);
+      setType(error.status);
+      setMessage(error.message);
+      console.log(error.message);
+    }
+  };
+
+  const onSubmit = async (data) => {
+    if(!data.amount) return;
+    setLoading(true);
+    const extendedObj = { ...data, loanId: loanId };
+    console.log(extendedObj);
+    await handleAutoPayment(extendedObj);
+    await fetchLoanWithRepayments(hpNumber);
+    await fetchRepaymentDetails();
+    reset();
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -59,7 +113,7 @@ const LoanRepayments = () => {
     <div className="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-6">
       <Navbar />
       <div className="max-w-6xl min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white p-8 flex flex-col items-center w-full">
-        {!loanDetails || !loanList?.customerDetails ? (
+        {!loanDetails || !loanList?.customerDetails || loading ? (
           <Loader />
         ) : (
           <div className="w-full max-w-6xl">
@@ -113,15 +167,56 @@ const LoanRepayments = () => {
                 <InfoItem
                   icon={BadgeDollarSign}
                   label="Total Amount Paid"
-                  value={`₹${loanDetails.totalPaid ? parseFloat(loanDetails?.totalPaid).toLocaleString("en-IN") : 0}`}
+                  value={`₹${
+                    loanDetails.totalPaid
+                      ? parseFloat(loanDetails?.totalPaid).toLocaleString(
+                          "en-IN"
+                        )
+                      : 0
+                  }`}
                   valueClass="text-green-500"
                 />
                 <InfoItem
                   icon={BadgeDollarSign}
                   label="Current Due"
-                  value={`₹${parseFloat(loanDetails?.totalAmountDue).toLocaleString("en-IN")}`}
+                  value={`₹${parseFloat(
+                    loanDetails?.totalAmountDue
+                  ).toLocaleString("en-IN")}`}
                   valueClass="text-[#ff2b36]"
                 />
+                <form className="flex gap-4 w-3xl flex-col">
+                  <div className="flex gap-4">
+                    <div className="flex flex-col">
+                      <label className="block mb-1">Payment Mode : </label>
+                      <div>
+                        <select
+                          {...register("paymentMode")}
+                          className="w-full p-2 rounded bg-gray-700 text-white"
+                        >
+                          <option>Card</option>
+                          <option>UPI</option>
+                          <option>Cash</option>
+                          <option>Netbanking</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="block mb-1">Amount : </label>
+                      <input
+                        {...register("amount")}
+                        type="number"
+                        className="p-2 rounded bg-gray-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    onClick={handleSubmit(onSubmit)}
+                    className="bg-teal-400 w-fit px-6 hover:bg-teal-500 cursor-pointer text-gray-900 font-semibold text-lg py-2 rounded-full shadow-xl transition duration-300"
+                  >
+                    Auto Payment
+                  </button>
+                </form>
               </div>
             </div>
 
@@ -140,6 +235,7 @@ const LoanRepayments = () => {
           </div>
         )}
       </div>
+      <Popup />
     </div>
   );
 };

@@ -16,7 +16,7 @@ const AddCustomer = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    console.log(data)
+    console.log(data);
     setLoading(true);
 
     try {
@@ -300,13 +300,34 @@ const AddCustomer = () => {
             <label className="block mb-1">Phone Number</label>
             <input
               type="tel"
-              {...register("guarantor.phone", { required: "Phone is required" })}
+              {...register("guarantor.phone", {
+                required: "Phone is required",
+              })}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
             {errors?.guarantor?.phone && (
-              <p className="text-red-400 text-sm">{errors.guarantor.phone.message}</p>
+              <p className="text-red-400 text-sm">
+                {errors.guarantor.phone.message}
+              </p>
             )}
           </div>
+
+          <div>
+            <label className="block mb-1">Aadhaar / PAN</label>
+            <input
+              type="text"
+              {...register("guarantor.aadhaarOrPan", {
+                required: "Aadhaar/PAN is required",
+              })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+            {errors.guarantor?.aadhaar_pan && (
+              <p className="text-red-400 text-sm">
+                {errors.guarantor?.aadhaar_pan.message}
+              </p>
+            )}
+          </div>
+
           <div className="md:col-span-2">
             <label className="block mb-1">Address</label>
             <textarea

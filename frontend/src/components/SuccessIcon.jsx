@@ -5,7 +5,7 @@ const SuccessIcon = () => (
     viewBox="0 0 24 24"
     fill="green"
   >
-    <circle cx="12" cy="12" r="12" fill="green" />
+    <circle cx="12" cy="12" r="10" fill="green" />
     <path
       d="M17 8L10 15L7 12"
       stroke="white"

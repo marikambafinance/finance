@@ -44,7 +44,6 @@ const RepaymentCard = ({
     },
   });
 
-  const amountDue = Number(watch("amountDue")) || 0;
   const status = watch("status");
   const penalty = Number(watch("penalty")) || 0;
   const recoveryAgent = watch("recoveryAgent");
@@ -111,8 +110,8 @@ const RepaymentCard = ({
       setValue("customPenaltyCheck", isCustomPenaltyCheck);
       if (isCustomPenaltyCheck) {
         setValue("totalPenalty", customPenalty);
-      }else{
-        setValue("remainingPayment", (totalAmountDue - paidAmount))
+      } else {
+        setValue("remainingPayment", totalAmountDue - paidAmount);
       }
     }
   };
@@ -130,12 +129,12 @@ const RepaymentCard = ({
     }
   };
 
-  useEffect(()=>{
-    if(editMode){
+  useEffect(() => {
+    if (editMode && repayment?.status !== "paid") {
       setValue("amountPaid", 0);
-      setValue("remainingPayment", (totalAmountDue - repayment?.amountPaid));
+      setValue("remainingPayment", totalAmountDue - repayment?.amountPaid);
     }
-  },[editMode])
+  }, [editMode]);
 
   const updateRepayment = async (data) => {
     try {
@@ -154,7 +153,7 @@ const RepaymentCard = ({
       const result = await res.json();
       setShowPopup(true);
       setType(result?.status);
-      setMessage(result?.message)
+      setMessage(result?.message);
     } catch (error) {
       setType("error");
       setShowPopup(true);
@@ -166,7 +165,7 @@ const RepaymentCard = ({
     if (editMode) {
       const isAgent = !recoveryAgent;
       setValue("recoveryAgent", isAgent);
-      setValue("remainingPayment", (totalAmountDue - repayment?.amountPaid));
+      setValue("remainingPayment", totalAmountDue - repayment?.amountPaid);
       setValue("recoveryAgentAmount", isAgent ? 500 : 0);
     }
   };
@@ -289,12 +288,36 @@ const RepaymentCard = ({
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Remaining Payment</span>
           <input type="hidden" {...register("remainingPayment")} />
-          <span>₹{watch("remainingPayment")}</span>
+          <span>₹{watch("remainingPayment").toFixed(2)}</span>
         </div>
 
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Status</span>
-          {editMode ? (
+          {repayment?.status === "partial" ? (
+            <span
+              className={`p-2 rounded text-sm ${
+                status === "pending"
+                  ? "bg-amber-600"
+                  : watch("status") === "paid"
+                  ? "bg-green-500"
+                  : "bg-[#007292]"
+              } text-white`}
+            >
+              {watch("status")}
+            </span>
+          ) : editMode && repayment?.status === "paid" ? (
+            <span
+              className={`p-2 rounded text-sm ${
+                status === "pending"
+                  ? "bg-amber-600"
+                  : watch("status") === "paid"
+                  ? "bg-green-500"
+                  : "bg-[#007292]"
+              } text-white`}
+            >
+              {watch("status")}
+            </span>
+          ) : (
             <select
               {...register("status")}
               onChange={handleStatusChange}
@@ -310,18 +333,6 @@ const RepaymentCard = ({
               <option value="paid">paid</option>
               <option value="partial">partial</option>
             </select>
-          ) : (
-            <span
-              className={`p-2 rounded text-sm ${
-                status === "pending"
-                  ? "bg-amber-600"
-                  : watch("status") === "paid"
-                  ? "bg-green-500"
-                  : "bg-[#007292]"
-              } text-white`}
-            >
-              {watch("status")}
-            </span>
           )}
         </div>
 
