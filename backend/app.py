@@ -15,6 +15,7 @@ import time
 import pymongo
 import hashlib
 from dateutil.relativedelta import relativedelta
+from pymongo import UpdateOne
 #from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)  # Allows requests from all origins (React frontend)
@@ -1044,6 +1045,109 @@ def dashboard_stats():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/auto_update_repayments",methods=["POST","OPTIONS"])
+def auto_update():
+    current_date = datetime.now()
+    respone = request.get_json(force=True)
+    loan_id = respone["loanId"]
+    payment_amount=respone["amount"]
+    payment_mode =respone["paymentMode"]
+    # Step 1: Fetch loan summary
+    loan = db.loans.find_one({"loanId": loan_id})
+    if not loan:
+        return jsonify({"error": "Loan not found"}),404
+
+    total_payable = float(loan.get("totalPayable", 0))
+    total_paid = float(loan.get("totalPaid", 0))
+    total_remaining = total_payable - total_paid
+
+    # Step 2: Determine how much of the payment can be allocated
+    allocatable_amount = min(payment_amount, total_remaining)
+    unallocated_amount = max(0, payment_amount - total_remaining)
+    remaining = allocatable_amount
+
+    # Step 3: Fetch unpaid or partially paid EMIs (sorted oldest first)
+    try:
+        repayments = db.repayments.find({
+            "loanId": loan_id,
+            "status": {"$ne": "paid"}
+        }).sort("dueDate", 1)
+
+        bulk_updates = []
+
+        for r in repayments:
+            emi_id = r["_id"]
+            total_due = float(r.get("totalAmountDue", 0))
+            already_paid = float(r.get("amountPaid", 0))
+            remaining_due = total_due - already_paid
+            payment_id = generate_unique_payment_id()
+            if remaining_due <= 0:
+                continue
+
+            if remaining >= remaining_due:
+                new_paid = total_due
+                new_status = "paid"
+                used_amount = remaining_due
+            else:
+                new_paid = already_paid + remaining
+                new_status = "partial"
+                used_amount = remaining
+
+            update_doc = {
+                "amountPaid": str(new_paid),
+                "status": new_status,
+                "paymentDate": current_date,
+                "paymentId": payment_id,
+                "paymentMode": payment_mode,
+                "updatedOn": current_date,
+                "remainingPayment": str(total_due - new_paid)
+            }
+
+            bulk_updates.append(UpdateOne({"_id": emi_id}, {"$set": update_doc}))
+
+            remaining -= used_amount
+            if remaining <= 0:
+                break
+
+        # Step 4: Execute bulk EMI updates
+        if bulk_updates:
+            db.repayments.bulk_write(bulk_updates)
+
+        # Step 5: Update the loan summary
+        new_total_paid = total_paid + allocatable_amount
+        new_total_due = total_payable - new_total_paid
+
+        db.loans.update_one(
+            {"loanId": loan_id},
+            {
+                "$set": {
+                    "totalPaid": str(new_total_paid),
+                    "totalAmountDue": str(new_total_due)
+                }
+            }
+        )
+
+        db.payments.insert_one({
+        "hpNumber": loan["hpNumber"],
+        "loanId": loan_id,
+        "paymentId": payment_id,
+        "paymentMode": payment_mode,
+        "amountPaid": payment_amount,
+        "paymentDate": current_date,
+        "createdOn": current_date
+         })
+        # Step 6: Return summary
+        return {
+            "loanId": loan_id,
+            "allocatedAmount": allocatable_amount,
+            "unallocatedAmount": unallocated_amount,
+            "remainingLoanBalance": new_total_due,
+            "message":"Db updated Successfully"
+        }
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)})
+
 
     
 @app.route("/")
