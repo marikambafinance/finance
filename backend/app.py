@@ -811,14 +811,20 @@ def update_repayment():
             }}
         )
         hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
-        update_ledger = db.ledger.insert_one({
-            "hpNumber":hpNumber["hpNumber"],
-            "loanId":loan_id,
-            "paymentId":payment_id,
-            "paymentMode":payment_mode,
-            "amountPaid":new_amount_paid if status!="partial" else new_amount_paid-float(amount_paid["amountPaid"]),
-            "paymentDate":payment_date
-        })
+        amount_to_update = (
+                new_amount_paid
+                if status != "partially_paid"
+                else new_amount_paid - float(amount_paid["amountPaid"])
+            )
+        if amount_to_update >0:              
+            update_ledger = db.ledger.insert_one({
+                "hpNumber":hpNumber["hpNumber"],
+                "loanId":loan_id,
+                "paymentId":payment_id,
+                "paymentMode":payment_mode,
+                "amountPaid":new_amount_paid if status!="partial" else new_amount_paid-float(amount_paid["amountPaid"]),
+                "paymentDate":payment_date
+            })
 
         loan_res = db.repayments.aggregate(           [
                     { "$match": { "loanId": loan_id } },
@@ -1135,7 +1141,7 @@ def auto_update():
             }
         )
 
-        db.payments.insert_one({
+        db.ledger.insert_one({
         "hpNumber": loan["hpNumber"],
         "loanId": loan_id,
         "paymentId": payment_id,
