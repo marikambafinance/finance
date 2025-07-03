@@ -445,6 +445,17 @@ def insert_loan_data(loan_data):
         loan_data["totalAmountDue"] =loan_data["totalPayable"]
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
+        db.ledger.insert_one({
+        "hpNumber": loan_data["hpNumber"],
+        "loanId": loan_data["loanId"],
+        "paymentId": generate_unique_payment_id(),
+        "paymentMode": "cash",
+        "amountIssued": loan_data["totalAmountDue"],
+        "actualAmountIssued":loan_data["totalAmountDue"],
+        "paymentDate": datetime.now(),
+        "createdOn": datetime.now(),
+        "amountPaid":0
+         })
 
         return {"data":loan_data}
     else:
@@ -823,7 +834,8 @@ def update_repayment():
                 "paymentId":payment_id,
                 "paymentMode":payment_mode,
                 "amountPaid":new_amount_paid if status!="partial" else new_amount_paid-float(amount_paid["amountPaid"]),
-                "paymentDate":payment_date
+                "paymentDate":payment_date,
+                "createdOn":datetime.now()
             })
 
         loan_res = db.repayments.aggregate(           [
