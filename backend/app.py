@@ -1080,6 +1080,9 @@ def auto_update():
     total_paid = float(loan.get("totalPaid", 0))
     total_remaining = round((total_payable - total_paid),2)
 
+    if payment_amount==0:
+        return jsonify({"status":"error","message":"please enter amount > 0"}),400
+
     if payment_amount > total_remaining:
         return jsonify({
             "message": "Excess amount provided",
