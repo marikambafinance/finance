@@ -178,7 +178,7 @@ def apply_monthly_penalties_new():
             repayment_id = repayment['_id']
             due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
             due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-           
+            total_amount_due = repayment["totalAmountDue"]
             emi = float(repayment["amountDue"])
             updatedOn = repayment.get("updatedOn",None)
        
@@ -197,6 +197,8 @@ def apply_monthly_penalties_new():
                                 "updatedOn": current_date, # Set last update time
                                 "TotalPenaltyMonths": months,
                                 "penalty": penalty,
+                                "totalAmountDue":total_amount_due+penalty,
+                                "totalPenalty":penalty
                                 }
                         }
                     }
