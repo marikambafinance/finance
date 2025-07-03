@@ -770,15 +770,18 @@ def update_repayment():
     customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
+
+    if status !="partial":
+        if db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"status":1,"_id":0})["status"]==status:
+            return jsonify({
+                "status": "error",
+                "message": f"Payment was already made, Unable to update"
+            }), 200
     
-    if db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"status":1,"_id":0})["status"]==status:
-        return jsonify({
-            "status": "error",
-            "message": f"Payment was already made, Unable to update"
-        }), 200
+    if status=="partial":
+        if float(new_amount_paid)-float(remainingPayment)<0:
+            return jsonify({"status":"error","message":"Remaining balance cannot be negative"})
     
-    if float(remainingPayment)<0:
-        return jsonify({"status":"error","message":"Remaining balance cannot be negative"})
     if status=="partial":
         amount_paid = db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"amountPaid":1,"_id":0})
         new_amount_paid+= float(amount_paid["amountPaid"])
