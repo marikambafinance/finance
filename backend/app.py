@@ -753,11 +753,7 @@ def update_repayment():
             "status": "error",
             "message": f"The following keys are missing: {', '.join(missing_keys)}"
         }), 400
-    if (float(data.get("totalAmountDue",0)<=float(data.get("amountPaid",0)))):
-        return jsonify({
-            "status": "error",
-            "message": f"Payment was already made, Unable to update"
-        }), 200
+    
     # Extract and clean inputs
     loan_id = data["loanId"].strip()
     installment_number = int(data["installmentNumber"])
@@ -774,6 +770,13 @@ def update_repayment():
     customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
+    
+    if db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"status":1,"_id":0})["status"]==status:
+        return jsonify({
+            "status": "error",
+            "message": f"Payment was already made, Unable to update"
+        }), 200
+    
     if float(remainingPayment)<0:
         return jsonify({"status":"error","message":"Remaining balance cannot be negative"})
     if status=="partial":
