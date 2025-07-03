@@ -779,7 +779,7 @@ def update_repayment():
             }), 200
     
     if status=="partial":
-        if float(new_amount_paid)-float(remainingPayment)<0:
+        if float(remainingPayment)-float(new_amount_paid)<0:
             return jsonify({"status":"error","message":"Remaining balance cannot be negative"})
     
     if status=="partial":
@@ -1044,7 +1044,7 @@ def dashboard_stats():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-    
+
     
 @app.route("/")
 def home():
