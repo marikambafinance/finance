@@ -1051,7 +1051,7 @@ def auto_update():
     current_date = datetime.now()
     respone = request.get_json(force=True)
     loan_id = respone["loanId"]
-    payment_amount=respone["amount"]
+    payment_amount=float(respone["amount"])
     payment_mode =respone["paymentMode"]
     # Step 1: Fetch loan summary
     loan = db.loans.find_one({"loanId": loan_id})
@@ -1061,6 +1061,13 @@ def auto_update():
     total_payable = float(loan.get("totalPayable", 0))
     total_paid = float(loan.get("totalPaid", 0))
     total_remaining = total_payable - total_paid
+
+    if payment_amount > total_remaining:
+        return jsonify({
+            "error": "Excess amount provided",
+            "amountAllowed": total_remaining,
+            "amountGiven": payment_amount
+        })
 
     # Step 2: Determine how much of the payment can be allocated
     allocatable_amount = min(payment_amount, total_remaining)
