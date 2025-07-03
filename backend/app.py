@@ -1066,14 +1066,15 @@ def auto_update():
 
     total_payable = float(loan.get("totalPayable", 0))
     total_paid = float(loan.get("totalPaid", 0))
-    total_remaining = total_payable - total_paid
+    total_remaining = round((total_payable - total_paid),2)
 
     if payment_amount > total_remaining:
         return jsonify({
-            "error": "Excess amount provided",
+            "message": "Excess amount provided",
             "amountAllowed": total_remaining,
-            "amountGiven": payment_amount
-        })
+            "amountGiven": payment_amount,
+            "status":"error"
+        }),400
 
     # Step 2: Determine how much of the payment can be allocated
     allocatable_amount = min(payment_amount, total_remaining)
