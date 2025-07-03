@@ -767,7 +767,7 @@ def update_repayment():
     totalPenalty = data.get("totalPenalty",0)
     recoveryAgentAmount = str(data["recoveryAgentAmount"])
     customPenalty = str(data["customPenalty"])
-    remainingPayment =str(data["remainingPayment"])
+    remainingPayment =round(float(data["remainingPayment"]),2)
     customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
@@ -780,7 +780,7 @@ def update_repayment():
             }), 200
     
     if status=="partial":
-        if float(remainingPayment)-float(new_amount_paid)<0:
+        if (remainingPayment-round(float(new_amount_paid),2))<0:
             return jsonify({"status":"error","message":"Remaining balance cannot be negative"})
     
     if status=="partial":
