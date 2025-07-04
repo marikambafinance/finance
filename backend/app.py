@@ -97,7 +97,7 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
         tenure = int(months)
 
         # Calculate flat monthly interest
-        monthly_interest = round((loan_amount * interest_rate) / (100 * tenure), 2)
+        monthly_interest = round(((loan_amount/tenure)*(interest_rate/100)),2)
 
         start_date = datetime.now(ZoneInfo("Asia/Kolkata")).replace(hour=0, minute=0, second=0, microsecond=0)
         repayment_entries = []
@@ -1168,6 +1168,7 @@ def auto_update():
          })
         # Step 6: Return summary
         return {
+            "status":"success",
             "loanId": loan_id,
             "allocatedAmount": allocatable_amount,
             "unallocatedAmount": unallocated_amount,
