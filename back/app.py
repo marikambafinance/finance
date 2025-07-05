@@ -181,6 +181,7 @@ def apply_monthly_penalties_new():
             total_amount_due = float(repayment["totalAmountDue"])
             emi = float(repayment["amountDue"])
             updatedOn = repayment.get("updatedOn",None)
+            repaymentAgentAmount = float(repayment.get("repaymentAgentAmount",0))
        
             if updatedOn:
                 updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
@@ -188,7 +189,7 @@ def apply_monthly_penalties_new():
             if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
                 pass
             else:
-                previousDues = float(repayment.get("previousDues",0))
+                #previousDues = float(repayment.get("previousDues",0))
                 penalty,months = calculate_penalty(due_date,current_date)
                 bulk_updates.append(
                     {
@@ -197,9 +198,9 @@ def apply_monthly_penalties_new():
                             "$set": {
                                 "updatedOn": current_date, # Set last update time
                                 "TotalPenaltyMonths": months,
-                                "penalty": penalty+previousDues,
-                                "totalAmountDue":str(emi+penalty+previousDues),
-                                "totalPenalty":penalty +float(repayment.get("recoveryAgentAmount",0)+previousDues)
+                                "penalty": penalty,
+                                "totalAmountDue":str(emi+penalty+repaymentAgentAmount),
+                                "totalPenalty":penalty +repaymentAgentAmount
                                 }
                         }
                     }
