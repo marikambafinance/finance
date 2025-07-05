@@ -848,7 +848,9 @@ def update_repayment():
         if customPenaltyCheck  and recovery_agent:
             if totalPenalty<(customPenalty+recoveryAgentAmount):
                 next_month_penalty =500
+                print(next_month_penalty)
                 update_next_month_penalty(next_month_penalty)
+                print("db updated")
 
         hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
         amount_to_update = (
