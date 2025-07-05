@@ -1264,7 +1264,7 @@ def foreclose():
                 "paymentDate": datetime.now(),
                 "amountPaid": round(totalAmountDue, 2)
             })
-            if update.modified_count>0 and update_ledger.modified_count>0:
+            if update.modified_count > 0:
                 return jsonify({"status": "success", "message": "DB updated successfully"}),200
             else:
                 return jsonify({"status": "error", "message": "DB was not updated"}),401
