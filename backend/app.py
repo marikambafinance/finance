@@ -1239,36 +1239,37 @@ def foreclose():
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
     totalPayable += monthly_interest
 
-    if (status !="closed") or (status!="foreclosed"):
+    if status != "closed" and status != "foreclosed":
         try:
-            update = db.loans.update_one({"loan_id":loan_id},{
-                {"$set":{
-                    "status":"foreclosed",
-                    "totalPayable":totalPayable,
-                    "totalAmountDue":"0",
-                    "updatedOn":datetime.now()
-                }}
-            })
+            update = db.loans.update_one(
+                {"loan_id": loan_id},
+                {
+                    "$set": {
+                        "status": "foreclosed",
+                        "totalPayable": totalPayable,
+                        "totalAmountDue": "0",
+                        "updatedOn": datetime.now()
+                    }
+                }
+            )
 
             update_ledger = db.ledger.insert_one({
-                { 
-                        "hpNumber": hpNumber,
-                        "loanId": loan_id,
-                        "paymentId": generate_unique_payment_id(),
-                        "paymentMode": "cash",
-                        "paymentDate": paymentMode,
-                        "createdOn": datetime.now(),
-                        "updatedOn":datetime.now(),
-                        "amountPaid": round(totalAmountDue,2)
-                }
-
+                "hpNumber": hpNumber,
+                "loanId": loan_id,
+                "paymentId": generate_unique_payment_id(),
+                "paymentMode": "cash",
+                "paymentDate": paymentMode,  # <-- Make sure this is a date, not a variable misused
+                "createdOn": datetime.now(),
+                "updatedOn": datetime.now(),
+                "amountPaid": round(totalAmountDue, 2)
             })
 
-            return jsonify({"status":"success","message":"DB updated successfully"})
+            return jsonify({"status": "success", "message": "DB updated successfully"})
+
         except Exception as e:
-            return jsonify({"status":"error","message":str(e)})
+            return jsonify({"status": "error", "message": str(e)})
     else:
-        return jsonify({"status":"error","message":"loan was already closed"})
+        return jsonify({"status": "error", "message": "Loan was already closed"})
 
 @app.route("/")
 def home():
