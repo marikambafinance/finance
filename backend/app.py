@@ -752,7 +752,7 @@ def get_loans_with_repayments():
     
 
 
-def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber):
+def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber,penalty,recoveryAgentAmount,total_amount_due):
     loan = db.loans.find_one(
         {"hpNumber": hpNumber, "loanId": loanid},
         {"loanTerm": 1, "_id": 0}
@@ -772,6 +772,12 @@ def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinsta
             {
                 "$inc": {
                     "previousDues": next_month_penalty
+                },
+                "$set":
+                {
+                    "penalty": penalty+next_month_penalty,
+                    "totalAmountDue":str(total_amount_due+penalty+next_month_penalty),
+                    "totalPenalty": str(penalty +float(recoveryAgentAmount)+next_month_penalty)
                 }
             }
         )
@@ -803,7 +809,7 @@ def update_repayment():
     total_amount_due = float(data.get("totalAmountDue", 0)) # convert to float if stored as numeric in DB
     penalty = str(data["penalty"])
     totalPenalty = data.get("totalPenalty",0)
-    recoveryAgentAmount = str(data["recoveryAgentAmount"])
+    recoveryAgentAmount = str(data.get("recoveryAgentAmount",0))
     customPenalty = str(data["customPenalty"])
     remainingPayment =round(float(data["remainingPayment"]),2)
     customPenaltyCheck = data["customPenaltyCheck"]
@@ -854,9 +860,9 @@ def update_repayment():
         if customPenaltyCheck  and recovery_agent:
             if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
                 next_month_penalty =500
-                print(next_month_penalty)
-                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number)
-                print("db updated")
+                #print(next_month_penalty)
+                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number,float(penalty),float(recoveryAgentAmount),float(total_amount_due))
+                #print("db updated")
 
         
         amount_to_update = (
