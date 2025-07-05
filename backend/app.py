@@ -1239,7 +1239,7 @@ def foreclose():
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
     totalPayable += monthly_interest
     totalPaid = totalPayable
-    recent_installment = db.repayments.find_one(
+    recent_install = db.repayments.find_one(
                                     {
                                             "hpNumber": hpNumber,
                                             "loanId": loan_id,
@@ -1247,7 +1247,8 @@ def foreclose():
                                         },
                                     {"installmentNumber": 1, "_id": 0},
                                     sort=[("installmentNumber", 1)]
-                                )["installmentNumber"]
+                                )
+    recent_installment = recent_install.get("installmentNumber",1)
     if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
         try:
             update = db.loans.update_one(
