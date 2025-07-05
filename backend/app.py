@@ -1235,7 +1235,7 @@ def foreclose():
     status  = loan["status"]
     totalPayable = float(loan["totalPayable"])
     totalAmountDue =  float(loan["totalAmountDue"])
-    hpNumber =  loan["hjpNumber"]
+    hpNumber =  loan["hpNumber"]
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
     totalPayable += monthly_interest
 
