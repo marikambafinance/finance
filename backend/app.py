@@ -844,7 +844,8 @@ def update_repayment():
 
             }}
         )
-
+        hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
+        
         if customPenaltyCheck  and recovery_agent:
             if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
                 next_month_penalty =500
@@ -852,7 +853,7 @@ def update_repayment():
                 update_next_month_penalty(next_month_penalty,hpNumber,loan_id,installment_number)
                 print("db updated")
 
-        hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
+        
         amount_to_update = (
                 new_amount_paid
                 if status != "partially_paid"
