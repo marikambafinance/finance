@@ -1238,17 +1238,19 @@ def foreclose():
     hpNumber =  loan["hpNumber"]
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
     totalPayable += monthly_interest
+    totalPaid = totalPayable
 
     if status != "closed" and status != "foreclosed":
         try:
             update = db.loans.update_one(
-                {"loan_id": loan_id},
+                {"loanId": loan_id},
                 {
                     "$set": {
                         "status": "foreclosed",
                         "totalPayable": totalPayable,
                         "totalAmountDue": "0",
-                        "updatedOn": datetime.now()
+                        "updatedOn": datetime.now(),
+                        "totalPaid":float(totalPaid)
                     }
                 }
             )
@@ -1257,14 +1259,15 @@ def foreclose():
                 "hpNumber": hpNumber,
                 "loanId": loan_id,
                 "paymentId": generate_unique_payment_id(),
-                "paymentMode": "cash",
-                "paymentDate": paymentMode,  # <-- Make sure this is a date, not a variable misused
+                "paymentMode": paymentMode,  # <-- Make sure this is a date, not a variable misused
                 "createdOn": datetime.now(),
-                "updatedOn": datetime.now(),
+                "paymentDate": datetime.now(),
                 "amountPaid": round(totalAmountDue, 2)
             })
-
-            return jsonify({"status": "success", "message": "DB updated successfully"})
+            if update.modified_count>0 and update_ledger.modified_count>0:
+                return jsonify({"status": "success", "message": "DB updated successfully"}),200
+            else:
+                return jsonify({"status": "error", "message": "DB was not updated"}),401
 
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
