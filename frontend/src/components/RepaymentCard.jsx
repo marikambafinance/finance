@@ -29,12 +29,14 @@ const RepaymentCard = ({
       installmentNumber: repayment?.installmentNumber || "",
       amountDue: Number(repayment?.amountDue || 0),
       amountPaid: Number(repayment?.amountPaid),
-      totalAmountDue:
-        Number(repayment.amountDue || 0) + Number(repayment.totalPenalty ?? 0),
+      totalAmountDue: Number(repayment?.totalAmountDue),
       recoveryAgent: repayment?.recoveryAgent || false,
       status: repayment?.status,
-      paymentMode: repayment?.paymentMode || "-",
-      penalty: Number(repayment?.penalty || 0),
+      paymentMode: repayment?.paymentMode || "Cash",
+      previousDues: repayment?.previousDues,
+      penalty:
+        Number(repayment?.penalty || 0) +
+        (Number(repayment?.previousDues) || 0),
       recoveryAgentAmount: Number(repayment?.recoveryAgentAmount || 0),
       totalPenalty: Number(repayment?.totalPenalty || 0),
       customPenaltyCheck: false,
@@ -46,18 +48,12 @@ const RepaymentCard = ({
 
   const status = watch("status");
   const penalty = Number(watch("penalty")) || 0;
+  const recoveryAgentAmount = Number(watch("recoveryAgentAmount"));
   const recoveryAgent = watch("recoveryAgent");
   const totalPenalty = Number(watch("totalPenalty")) || 0;
   const totalAmountDue = Number(watch("totalAmountDue"));
   const customPenalty = Number(watch("customPenalty"));
   const customPenaltyCheck = watch("customPenaltyCheck");
-
-  useEffect(() => {
-    if (!editMode) return; // Don't auto-calculate if not editing
-    const recoveryFee = recoveryAgent ? 500 : 0;
-    const newTotalPenalty = penalty + recoveryFee;
-    setValue("totalPenalty", newTotalPenalty);
-  }, [penalty, recoveryAgent, setValue]);
 
   useEffect(() => {
     if (!editMode) return;
@@ -82,17 +78,25 @@ const RepaymentCard = ({
   }, [customPenalty, recoveryAgent, customPenaltyCheck]);
 
   useEffect(() => {
+    if (!editMode) return;
+    const recoveryFee = recoveryAgentAmount;
+    const newTotalPenalty = penalty + recoveryFee;
+    recoveryAgent
+      ? setValue("totalPenalty", newTotalPenalty)
+      : setValue("totalPenalty", repayment?.totalPenalty);
+  }, [penalty, recoveryAgent, setValue]);
+
+  useEffect(() => {
     reset({
       loanId: repayment?.loanId || "",
       installmentNumber: repayment?.installmentNumber || "",
       amountDue: Number(repayment?.amountDue || 0),
       amountPaid: Number(repayment?.amountPaid),
-      totalAmountDue:
-        Number(repayment.amountDue || 0) +
-        Number(repayment.totalPenalty ? repayment.totalPenalty : 0),
+      totalAmountDue: Number(repayment?.totalAmountDue),
       recoveryAgent: repayment?.recoveryAgent || false,
       status: repayment?.status,
-      paymentMode: repayment?.paymentMode || "-",
+      paymentMode: repayment?.paymentMode || "Cash",
+      previousDues: repayment?.previousDues,
       penalty: Number(repayment?.penalty || 0),
       recoveryAgentAmount: Number(repayment?.recoveryAgentAmount || 0),
       totalPenalty: Number(repayment?.totalPenalty || 0),
@@ -149,8 +153,8 @@ const RepaymentCard = ({
           body: JSON.stringify(data),
         }
       );
-      if (!res.ok) throw new Error("Failed to Update");
       const result = await res.json();
+      if (!res.ok) throw new Error(result?.message);
       setShowPopup(true);
       setType(result?.status);
       setMessage(result?.message);
@@ -166,7 +170,10 @@ const RepaymentCard = ({
       const isAgent = !recoveryAgent;
       setValue("recoveryAgent", isAgent);
       setValue("remainingPayment", totalAmountDue - repayment?.amountPaid);
-      setValue("recoveryAgentAmount", isAgent ? 500 : 0);
+      // setValue("recoveryAgentAmount", isAgent ? recoveryAgentAmount + 500 : recoveryAgentAmount);
+      isAgent
+        ? setValue("recoveryAgentAmount", recoveryAgentAmount + 500)
+        : setValue("recoveryAgentAmount");
     }
   };
 
@@ -253,7 +260,14 @@ const RepaymentCard = ({
                 <input
                   type="number"
                   className="px-4 py-1 bg-gray-700 text-white rounded"
-                  {...register("customPenalty")}
+                  {...register("customPenalty", {
+                    validate: (value) => {
+                      if (repayment?.previousDues > 0 && value < repayment?.previousDues) {
+                        return `₹${repayment?.previousDues} Recovery Agent Fee is pending from previous month!`;
+                      }
+                      return true;
+                    },
+                  })}
                 />
                 {errors.customPenalty && (
                   <p className="text-red-500 text-sm mt-1">
@@ -305,7 +319,7 @@ const RepaymentCard = ({
             >
               {watch("status")}
             </span>
-          ) : editMode && repayment?.status === "paid" ? (
+          ) : repayment?.status === "paid" ? (
             <span
               className={`p-2 rounded text-sm ${
                 status === "pending"
@@ -406,7 +420,7 @@ const RepaymentCard = ({
                   Cancel
                 </button>
               </div>
-            ) : (
+            ) : status === "pending" || status === "partial" ? (
               <button
                 type="button"
                 onClick={() => setEditMode(!editMode)}
@@ -414,6 +428,8 @@ const RepaymentCard = ({
               >
                 Edit
               </button>
+            ) : (
+              ""
             )}
           </div>
         </div>

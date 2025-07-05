@@ -40,14 +40,15 @@ const CreateLoanPage = () => {
       return;
     }
 
-    const interestAmount = (loanAmount * interestRate * (loanTerm / 12)) / 100;
+    const interestAmount = ((loanAmount * (loanTerm/100) * (interestRate)))/100 * loanTerm;
+      
     const totalPayable = loanAmount + interestAmount;
     const monthlyEMI = totalPayable / loanTerm;
 
     setValue("interestAmount", interestAmount.toFixed(2));
     setValue("totalPayable", totalPayable.toFixed(2));
     setValue("monthlyEMI", monthlyEMI.toFixed(2));
-  }, [loanAmount, interestRate, loanTerm, setValue]);
+  }, [loanAmount, interestRate, watch("loanTerm"), setValue]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -134,9 +135,7 @@ const CreateLoanPage = () => {
           </div>
 
           <div>
-            <label className="block mb-1">
-              Interest Rate
-            </label>
+            <label className="block mb-1">Interest Rate</label>
             <input
               placeholder="Interest Rate"
               type="number"
@@ -156,8 +155,9 @@ const CreateLoanPage = () => {
               <option value="6">6 Months</option>
               <option value="10">10 Months</option>
               <option value="12">12 Months</option>
+              <option value="18">18 Months</option>
               <option value="24">24 Months</option>
-              <option value="36">36 Months</option>              
+              <option value="36">36 Months</option>
             </select>
             {errors.loanTerm && (
               <p className="text-red-400 text-sm mt-1">
@@ -172,7 +172,11 @@ const CreateLoanPage = () => {
               type="text"
               readOnly
               value={
-                watch("interestAmount") ? `₹${watch("interestAmount")}` : ""
+                watch("interestAmount")
+                  ? `₹${parseFloat(watch("interestAmount")).toLocaleString(
+                      "en-IN"
+                    )}`
+                  : ""
               }
               placeholder="Interest Amount"
               className="p-2 rounded bg-gray-700 w-full"
@@ -184,7 +188,7 @@ const CreateLoanPage = () => {
             <input
               type="text"
               readOnly
-              value={watch("totalPayable") ? `₹${watch("totalPayable")}` : ""}
+              value={watch("totalPayable") ? `₹${parseFloat(watch("totalPayable")).toLocaleString("en-IN")}` : ""}
               placeholder="Total Payable"
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -195,7 +199,7 @@ const CreateLoanPage = () => {
             <input
               type="text"
               readOnly
-              value={watch("monthlyEMI") ? `₹${watch("monthlyEMI")}` : ""}
+              value={watch("monthlyEMI") ? `₹${parseFloat(watch("monthlyEMI")).toLocaleString("en-IN")}` : ""}
               placeholder="Monthly EMI"
               className="p-2 rounded bg-gray-700 w-full"
             />

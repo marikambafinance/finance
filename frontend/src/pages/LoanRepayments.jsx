@@ -9,6 +9,7 @@ import Loader from "../components/Loader";
 import { useForm } from "react-hook-form";
 import Popup from "../components/Popup";
 import { usePopupContext } from "../context/PopupContext";
+import ForeclosedNotice from "../components/ForecloseNotice";
 
 const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
@@ -16,15 +17,22 @@ const LoanRepayments = () => {
   const { loanList } = useLoanListContext();
 
   const [loading, setLoading] = useState(false);
+  const [refreshFlag, setRefreshFlag] = useState(0);
+
+  const [payMode, setPayMode] = useState("");
   const { setType, setMessage, setShowPopup } = usePopupContext();
 
   const [loanDetails, setLoanDetails] = useState(null);
   const [repayments, setRepayments] = useState([]);
+  const [filteredRepayments, setFilteredRepayments] = useState([]);
   const navigate = useNavigate();
+
+  console.log(repayments);
 
   const { register, handleSubmit, reset } = useForm();
 
   const fetchRepaymentDetails = async () => {
+    setLoading(true);
     try {
       const res = await fetch(
         "https://mariamma-finance.onrender.com/get_customer_repayment_info",
@@ -45,6 +53,8 @@ const LoanRepayments = () => {
       setType("error");
       setMessage(err.message);
       console.error("Error fetching repayment data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,8 +74,8 @@ const LoanRepayments = () => {
 
       const result = await res.json();
 
-      if(!res.ok){
-        throw new Error(result?.message);        
+      if (!res.ok) {
+        throw new Error(result?.message);
       }
       setShowPopup(true);
       setType(result?.status || "success");
@@ -76,11 +86,13 @@ const LoanRepayments = () => {
       setType(error.status);
       setMessage(error.message);
       console.log(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const onSubmit = async (data) => {
-    if(!data.amount) return;
+    if (!data.amount) return;
     setLoading(true);
     const extendedObj = { ...data, loanId: loanId };
     console.log(extendedObj);
@@ -91,10 +103,50 @@ const LoanRepayments = () => {
     setLoading(false);
   };
 
+  const handleForeclose = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        "https://mariamma-finance.onrender.com/foreclose",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "marikambafinance@123",
+          },
+          body: JSON.stringify({ loanId, paymentMode: payMode }),
+        }
+      );
+      const data = await res.json();
+      setRefreshFlag((prev) => prev + 1);
+      if (!res.ok) {
+        throw new Error(data?.message);
+      }
+      setLoading(false);
+      setShowPopup(true);
+      setType(data.status);
+      setMessage(data.message);
+      console.log(data);
+    } catch (error) {
+      setShowPopup(true);
+      setType(error.status || "error");
+      setMessage(error.message);
+      console.log("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchLoanWithRepayments(hpNumber);
-    fetchRepaymentDetails();
-  }, [hpNumber, loanId]);
+    const fetchAll = async () => {
+      setLoading(true);
+      await fetchLoanWithRepayments(hpNumber);
+      await fetchRepaymentDetails();
+      setLoading(false);
+    };
+
+    fetchAll();
+  }, [hpNumber, loanId, refreshFlag]);
 
   useEffect(() => {
     if (loanList?.data?.length > 0) {
@@ -102,6 +154,16 @@ const LoanRepayments = () => {
       setLoanDetails(matchedLoan);
     }
   }, [loanList, loanId]);
+
+  useEffect(() => {
+    if (loanDetails?.status === "foreclosed") {
+      setFilteredRepayments(
+        repayments.filter((item) => item.status === "paid")
+      );
+    } else {
+      setFilteredRepayments(repayments);
+    }
+  }, [loanDetails, repayments]);
 
   const fullName =
     loanList?.customerDetails?.firstName +
@@ -184,45 +246,72 @@ const LoanRepayments = () => {
                   ).toLocaleString("en-IN")}`}
                   valueClass="text-[#ff2b36]"
                 />
-                <form className="flex gap-4 w-3xl flex-col">
-                  <div className="flex gap-4">
-                    <div className="flex flex-col">
-                      <label className="block mb-1">Payment Mode : </label>
-                      <div>
-                        <select
-                          {...register("paymentMode")}
-                          className="w-full p-2 rounded bg-gray-700 text-white"
-                        >
-                          <option>Card</option>
-                          <option>UPI</option>
-                          <option>Cash</option>
-                          <option>Netbanking</option>
-                        </select>
+                <div className="flex justify-between col-span-full">
+                  <form className="flex gap-4 w-3xl flex-col">
+                    <div className="flex gap-4 items-end">
+                      <div className="flex flex-col">
+                        <label className="block mb-1">Payment Mode : </label>
+                        <div>
+                          <select
+                            {...register("paymentMode")}
+                            className="w-full p-2 rounded bg-gray-700 text-white"
+                          >
+                            <option>Card</option>
+                            <option>UPI</option>
+                            <option>Cash</option>
+                            <option>Netbanking</option>
+                          </select>
+                        </div>
                       </div>
+                      <div className="flex flex-col">
+                        <label className="block mb-1">Amount : </label>
+                        <input
+                          {...register("amount")}
+                          type="number"
+                          className="p-2 rounded bg-gray-700 text-white"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        onClick={handleSubmit(onSubmit)}
+                        className="bg-teal-400 w-fit px-6 hover:bg-teal-500 cursor-pointer text-gray-900 font-semibold text-lg py-2 rounded-full shadow-xl transition duration-300"
+                      >
+                        Auto Payment
+                      </button>
                     </div>
-                    <div className="flex flex-col">
-                      <label className="block mb-1">Amount : </label>
-                      <input
-                        {...register("amount")}
-                        type="number"
-                        className="p-2 rounded bg-gray-700 text-white"
-                      />
-                    </div>
+                  </form>
+                </div>
+                <div className="flex gap-4 col-span-full">
+                  <div className="flex flex-col w-48">
+                    <span className="text-xs text-gray-400">Payment Mode</span>
+                    <select
+                      value={payMode}
+                      onChange={(e) => setPayMode(e.target.value)}
+                      className="p-2 rounded bg-gray-700 text-white"
+                    >
+                      <option value="">Select</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Card">Card</option>
+                      <option value="Cash">Cash</option>
+                      <option value="NetBanking">Net Banking</option>
+                    </select>
                   </div>
-                  <button
-                    type="submit"
-                    onClick={handleSubmit(onSubmit)}
-                    className="bg-teal-400 w-fit px-6 hover:bg-teal-500 cursor-pointer text-gray-900 font-semibold text-lg py-2 rounded-full shadow-xl transition duration-300"
-                  >
-                    Auto Payment
-                  </button>
-                </form>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      onClick={handleForeclose}
+                      className="bg-teal-400 px-6 w-full hover:bg-teal-500 cursor-pointer text-gray-900 font-semibold text-lg py-2 rounded-full shadow-xl transition duration-300"
+                    >
+                      Foreclose Loan
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Repayment Cards */}
             <div className="bg-gradient-to-r from-gray-800 to-gray-700 shadow-2xl rounded-3xl border border-gray-600 p-8 space-y-6">
-              {repayments.map((item, idx) => (
+              {filteredRepayments.map((item, idx) => (
                 <RepaymentCard
                   key={idx}
                   repayment={item}
@@ -231,6 +320,7 @@ const LoanRepayments = () => {
                   hpNumber={hpNumber}
                 />
               ))}
+              <ForeclosedNotice />
             </div>
           </div>
         )}
