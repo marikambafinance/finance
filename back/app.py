@@ -181,7 +181,7 @@ def apply_monthly_penalties_new():
             total_amount_due = float(repayment["totalAmountDue"])
             emi = float(repayment["amountDue"])
             updatedOn = repayment.get("updatedOn",None)
-            repaymentAgentAmount = float(repayment.get("repaymentAgentAmount",0))
+            recoveryAgentAmount = float(repayment.get("recoveryAgentAmount",0))
        
             if updatedOn:
                 updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
@@ -199,8 +199,8 @@ def apply_monthly_penalties_new():
                                 "updatedOn": current_date, # Set last update time
                                 "TotalPenaltyMonths": months,
                                 "penalty": penalty,
-                                "totalAmountDue":str(emi+penalty+repaymentAgentAmount),
-                                "totalPenalty":penalty +repaymentAgentAmount
+                                "totalAmountDue":str(emi+penalty+recoveryAgentAmount),
+                                "totalPenalty":penalty +recoveryAgentAmount
                                 }
                         }
                     }
