@@ -750,6 +750,28 @@ def get_loans_with_repayments():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     
+
+
+def update_next_month_penalty(next_month_penalty,hpNumber,loanid,currentinstallmentNumber):
+    loan = db.loans.find_one(
+        {"hpNumber": hpNumber, "loanId": loanid},
+        {"loanTerm": 1, "_id": 0}
+    )
+    if currentinstallmentNumber != loan["loanTerm"]:
+         db.repayments.update_one(
+        {
+            "hpNumber": hpNumber,
+            "loanId": loanid,
+            "installmentNumber": currentinstallmentNumber + 1
+        },
+        {
+            "$inc": {
+                "previousDues": next_month_penalty,
+            }
+        }
+    )
+
+    
 @app.route("/update_repayment",methods=["POST","OPTIONS"])
 def update_repayment():
     data = request.get_json(force=True)
@@ -783,6 +805,7 @@ def update_repayment():
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
 
+    
     if status !="partial":
         if db.repayments.find_one({"loanId":loan_id,"installmentNumber":installment_number},{"status":1,"_id":0})["status"]==status:
             return jsonify({
@@ -821,6 +844,12 @@ def update_repayment():
 
             }}
         )
+
+        if customPenaltyCheck  and recovery_agent:
+            if totalPenalty<(customPenalty+recoveryAgentAmount):
+                next_month_penalty =500
+                update_next_month_penalty(next_month_penalty)
+
         hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
         amount_to_update = (
                 new_amount_paid
