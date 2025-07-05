@@ -188,8 +188,7 @@ def apply_monthly_penalties_new():
             if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
                 pass
             else:
-                due = db.repayments.find_one({"_id": repayment_id},{"previousDues":1,"_id":0})
-                previousDues = float(due.get("previousDues",0))
+                previousDues = float(repayment.get("previousDues",0))
                 penalty,months = calculate_penalty(due_date,current_date)
                 bulk_updates.append(
                     {
@@ -198,8 +197,8 @@ def apply_monthly_penalties_new():
                             "$set": {
                                 "updatedOn": current_date, # Set last update time
                                 "TotalPenaltyMonths": months,
-                                "penalty": penalty,
-                                "totalAmountDue":str(total_amount_due+penalty+previousDues),
+                                "penalty": penalty+previousDues,
+                                "totalAmountDue":str(emi+penalty+previousDues),
                                 "totalPenalty":penalty +float(repayment.get("recoveryAgentAmount",0)+previousDues)
                                 }
                         }
