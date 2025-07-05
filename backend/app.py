@@ -846,7 +846,7 @@ def update_repayment():
         )
 
         if customPenaltyCheck  and recovery_agent:
-            if totalPenalty<(customPenalty+recoveryAgentAmount):
+            if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
                 next_month_penalty =500
                 print(next_month_penalty)
                 update_next_month_penalty(next_month_penalty)
