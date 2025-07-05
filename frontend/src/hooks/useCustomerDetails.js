@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+const GET_CUSTOMER_DETAILS = import.meta.env.VITE_GET_CUSTOMER_DETAILS;
 
 const useCustomerDetails = (hpNumber)=>{
     const [custDetails, setCustDetails] = useState(null);
 
     const getCustomerDetails = async ()=>{
-        const res = await fetch("https://mariamma-finance.onrender.com/only_customer_and_loans",{
+        const res = await fetch(GET_CUSTOMER_DETAILS,{
             method: "POST",
             headers: {
-                'x-api-key': 'marikambafinance@123',
+                'x-api-key': HEADER_VALUE,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({hpNumber})

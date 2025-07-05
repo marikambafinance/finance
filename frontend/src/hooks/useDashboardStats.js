@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+const DASHBOARD_STATS = import.meta.env.VITE_DASHBOARD_STATS;
 
 const useDashboardStats = ()=>{
     const [financeData, setFinanceData] = useState(null);
 
     const getDashboardStats = async ()=>{
         try {
-            const res = await fetch("https://mariamma-finance.onrender.com//dashboard-stats",{
+            const res = await fetch(DASHBOARD_STATS,{
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": "marikambafinance@123"
+                    "x-api-key": HEADER_VALUE
                 }
             });
 

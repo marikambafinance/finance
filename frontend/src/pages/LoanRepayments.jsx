@@ -8,88 +8,40 @@ import { useLoanListContext } from "../context/LoanListContext";
 import Loader from "../components/Loader";
 import { useForm } from "react-hook-form";
 import Popup from "../components/Popup";
-import { usePopupContext } from "../context/PopupContext";
 import ForeclosedNotice from "../components/ForecloseNotice";
+import useRepaymentDetails from "../hooks/useRepaymentDetails";
+import useAutoPayment from "../hooks/useAutoPayment";
+import useForeclosure from "../hooks/useForeclosure";
 
 const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const { loanId, hpNumber } = useParams();
-  const { loanList } = useLoanListContext();
-
   const [loading, setLoading] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
-
+  const navigate = useNavigate();
   const [payMode, setPayMode] = useState("");
-  const { setType, setMessage, setShowPopup } = usePopupContext();
+
+  const { loanList } = useLoanListContext();
+
+  const { handleForeclose } = useForeclosure(
+    setLoading,
+    setRefreshFlag,
+    loanId,
+    payMode
+  );
 
   const [loanDetails, setLoanDetails] = useState(null);
-  const [repayments, setRepayments] = useState([]);
+
+  const { repayments, fetchRepaymentDetails } = useRepaymentDetails(
+    loanId,
+    setLoading
+  );
   const [filteredRepayments, setFilteredRepayments] = useState([]);
-  const navigate = useNavigate();
+  const { handleAutoPayment } = useAutoPayment(setLoading);
 
   console.log(repayments);
 
   const { register, handleSubmit, reset } = useForm();
-
-  const fetchRepaymentDetails = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        "https://mariamma-finance.onrender.com/get_customer_repayment_info",
-        {
-          method: "POST",
-          headers: {
-            "x-api-key": "marikambafinance@123",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ loanId }),
-        }
-      );
-      const data = await res.json();
-      console.log(data);
-      setRepayments(data?.repayment_data || []);
-    } catch (err) {
-      setShowPopup(true);
-      setType("error");
-      setMessage(err.message);
-      console.error("Error fetching repayment data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAutoPayment = async (data) => {
-    try {
-      const res = await fetch(
-        "https://mariamma-finance.onrender.com/auto_update_repayments",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": "marikambafinance@123",
-          },
-          body: JSON.stringify(data),
-        }
-      );
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result?.message);
-      }
-      setShowPopup(true);
-      setType(result?.status || "success");
-      setMessage(result?.message);
-      console.log(result);
-    } catch (error) {
-      setShowPopup(true);
-      setType(error.status);
-      setMessage(error.message);
-      console.log(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onSubmit = async (data) => {
     if (!data.amount) return;
@@ -101,40 +53,6 @@ const LoanRepayments = () => {
     await fetchRepaymentDetails();
     reset();
     setLoading(false);
-  };
-
-  const handleForeclose = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        "https://mariamma-finance.onrender.com/foreclose",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": "marikambafinance@123",
-          },
-          body: JSON.stringify({ loanId, paymentMode: payMode }),
-        }
-      );
-      const data = await res.json();
-      setRefreshFlag((prev) => prev + 1);
-      if (!res.ok) {
-        throw new Error(data?.message);
-      }
-      setLoading(false);
-      setShowPopup(true);
-      setType(data.status);
-      setMessage(data.message);
-      console.log(data);
-    } catch (error) {
-      setShowPopup(true);
-      setType(error.status || "error");
-      setMessage(error.message);
-      console.log("Error", error.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   useEffect(() => {

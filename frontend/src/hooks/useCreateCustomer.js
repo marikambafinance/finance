@@ -1,27 +1,30 @@
 import { useState } from "react";
 
-export const useCreateCustomer = ()=>{
-    const [loading, setLoading] = useState(false);
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+const REGISTER_USER = import.meta.env.VITE_REGISTER_USER;
 
-    const createCustomer = async (formData)=>{
-        try {
-            const res = await fetch('https://mariamma-finance.onrender.com/submit',{
-                method: "POST",
-                headers: {
-                    'x-api-key': 'marikambafinance@123',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
+export const useCreateCustomer = () => {
+  const [loading, setLoading] = useState(false);
 
-            const data = await res.json();
-            setLoading(false)
-            return data;
-        } catch (error) {
-            setLoading(false)
-            console.log("Error submitting the form : ",error.message)
-        }  
+  const createCustomer = async (formData) => {
+    try {
+      const res = await fetch(REGISTER_USER, {
+        method: "POST",
+        headers: {
+          "x-api-key": HEADER_VALUE,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      setLoading(false);
+      return data;
+    } catch (error) {
+      setLoading(false);
+      console.log("Error submitting the form : ", error.message);
     }
-    
-    return {createCustomer, loading, setLoading};
-}
+  };
+
+  return { createCustomer, loading, setLoading };
+};
