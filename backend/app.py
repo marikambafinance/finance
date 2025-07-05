@@ -1226,8 +1226,50 @@ def auto_update():
     except Exception as e:
         return jsonify({"status":"error","message":str(e)})
 
+@app.route("/foreclose", methods=['POST',"OPTIONS"])
+def foreclose():
+    data = request.get_json(force=True)
+    loan_id =data["loanId"]
+    paymentMode =  data["paymentMode"]
+    loan =  db.loans.find_one({"loanId":loan_id})
+    status  = loan["status"]
+    totalPayable = float(loan["totalPayable"])
+    totalAmountDue =  float(loan["totalAmountDue"])
+    hpNumber =  loan["hjpNumber"]
+    monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
+    totalPayable += monthly_interest
 
-    
+    if (status !="closed") or (status!="foreclosed"):
+        try:
+            update = db.loans.update_one({"loan_id":loan_id},{
+                {"$set":{
+                    "status":"foreclosed",
+                    "totalPayable":totalPayable,
+                    "totalAmountDue":"0",
+                    "updatedOn":datetime.now()
+                }}
+            })
+
+            update_ledger = db.ledger.insert_one({
+                { 
+                        "hpNumber": hpNumber,
+                        "loanId": loan_id,
+                        "paymentId": generate_unique_payment_id(),
+                        "paymentMode": "cash",
+                        "paymentDate": paymentMode,
+                        "createdOn": datetime.now(),
+                        "updatedOn":datetime.now(),
+                        "amountPaid": round(totalAmountDue,2)
+                }
+
+            })
+
+            return jsonify({"status":"success","message":"DB updated successfully"})
+        except Exception as e:
+            return jsonify({"status":"error","message":str(e)})
+    else:
+        return jsonify({"status":"error","message":"loan was already closed"})
+
 @app.route("/")
 def home():
     return jsonify({"message": "API is running"})
