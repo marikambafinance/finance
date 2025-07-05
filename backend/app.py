@@ -767,8 +767,8 @@ def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinsta
         penalty = float(repayment.get("penalty",0))
         amount_due  = float(repayment.get("amountDue",0))
         recoveryAgentAmount = float(repayment.get("recoveryAgentAmount",0))
-        new_penalty = penalty + next_month_penalty  # = 1000
-        new_total_penalty = penalty + next_month_penalty + recoveryAgentAmount  # = 1000
+        new_penalty = recoveryAgentAmount + next_month_penalty  # = 1000
+        new_total_penalty = penalty + new_penalty  # = 1000
         new_total_amount_due = amount_due + new_total_penalty 
         db.repayments.update_one(
             {
@@ -779,7 +779,7 @@ def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinsta
             {
                 "$set": {
                 "previousDues": next_month_penalty,
-                "penalty": new_penalty,
+                "recoveryAgentAmount": new_penalty,
                 "totalAmountDue": str(new_total_amount_due),
                 "totalPenalty": str(new_total_penalty)
             }
