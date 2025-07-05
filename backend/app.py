@@ -866,7 +866,7 @@ def update_repayment():
             if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
                 next_month_penalty =500
                 #print(next_month_penalty)
-                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number,float(penalty),float(recoveryAgentAmount),float(amount_due))
+                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number)
                 #print("db updated")
 
         
