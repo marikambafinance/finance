@@ -752,24 +752,29 @@ def get_loans_with_repayments():
     
 
 
-def update_next_month_penalty(next_month_penalty,hpNumber,loanid,currentinstallmentNumber):
+def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber):
     loan = db.loans.find_one(
         {"hpNumber": hpNumber, "loanId": loanid},
         {"loanTerm": 1, "_id": 0}
     )
+
+    if not loan:
+        print(f"No loan found for hpNumber={hpNumber}, loanId={loanid}")
+        return
+
     if currentinstallmentNumber != loan["loanTerm"]:
-         db.repayments.update_one(
-        {
-            "hpNumber": hpNumber,
-            "loanId": loanid,
-            "installmentNumber": currentinstallmentNumber + 1
-        },
-        {
-            "$inc": {
-                "previousDues": next_month_penalty,
+        db.repayments.update_one(
+            {
+                "hpNumber": hpNumber,
+                "loanId": loanid,
+                "installmentNumber": currentinstallmentNumber + 1
+            },
+            {
+                "$inc": {
+                    "previousDues": next_month_penalty
+                }
             }
-        }
-    )
+        )
 
     
 @app.route("/update_repayment",methods=["POST","OPTIONS"])
@@ -845,7 +850,7 @@ def update_repayment():
             }}
         )
         hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
-        
+
         if customPenaltyCheck  and recovery_agent:
             if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
                 next_month_penalty =500
