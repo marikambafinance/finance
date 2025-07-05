@@ -752,7 +752,7 @@ def get_loans_with_repayments():
     
 
 
-def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber,penalty,recoveryAgentAmount,amount_due):
+def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber):
     loan = db.loans.find_one(
         {"hpNumber": hpNumber, "loanId": loanid},
         {"loanTerm": 1, "_id": 0}
@@ -761,11 +761,14 @@ def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinsta
     if not loan:
         print(f"No loan found for hpNumber={hpNumber}, loanId={loanid}")
         return
-
+    
     if currentinstallmentNumber != loan["loanTerm"]:
+        repayment = db.repayments.find_one({"hpNumber": hpNumber, "loanId": loanid,"installmentNumber":(currentinstallmentNumber+1)})
+        penalty = float(repayment.get("penalty",0))
+        amount_due  = float(repayment.get("amountDue",0))
+        recoveryAgentAmount = float(repayment.get("recoveryAgentAmount",0))
         new_penalty = penalty + next_month_penalty  # = 1000
         new_total_penalty = penalty + next_month_penalty + recoveryAgentAmount  # = 1000
-
         new_total_amount_due = amount_due + new_total_penalty 
         db.repayments.update_one(
             {
