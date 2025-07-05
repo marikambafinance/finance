@@ -6,6 +6,10 @@ const useForeclosure = (setLoading, setRefreshFlag, loanId, payMode) => {
   const { setType, setMessage, setShowPopup } = usePopupContext();
 
   const handleForeclose = async () => {
+    const confirm = window.confirm(
+      "Are you sure you want to foreclose this loan?"
+    );
+    if (!confirm) return;
     setLoading(true);
     try {
       const res = await fetch(FORECLOSE_LOAN, {
