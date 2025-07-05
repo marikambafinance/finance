@@ -752,7 +752,7 @@ def get_loans_with_repayments():
     
 
 
-def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber,penalty,recoveryAgentAmount,total_amount_due):
+def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinstallmentNumber,penalty,recoveryAgentAmount,amount_due):
     loan = db.loans.find_one(
         {"hpNumber": hpNumber, "loanId": loanid},
         {"loanTerm": 1, "_id": 0}
@@ -763,6 +763,10 @@ def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinsta
         return
 
     if currentinstallmentNumber != loan["loanTerm"]:
+        new_penalty = penalty + next_month_penalty  # = 1000
+        new_total_penalty = penalty + next_month_penalty + recoveryAgentAmount  # = 1000
+
+        new_total_amount_due = amount_due + new_total_penalty 
         db.repayments.update_one(
             {
                 "hpNumber": hpNumber,
@@ -770,15 +774,12 @@ def update_next_month_penalty(next_month_penalty, hpNumber, loanid, currentinsta
                 "installmentNumber": currentinstallmentNumber + 1
             },
             {
-                "$inc": {
-                    "previousDues": next_month_penalty
-                },
-                "$set":
-                {
-                    "penalty": penalty+next_month_penalty,
-                    "totalAmountDue":str(total_amount_due+penalty+next_month_penalty),
-                    "totalPenalty": str(penalty +float(recoveryAgentAmount)+next_month_penalty)
-                }
+                "$set": {
+                "previousDues": next_month_penalty,
+                "penalty": new_penalty,
+                "totalAmountDue": str(new_total_amount_due),
+                "totalPenalty": str(new_total_penalty)
+            }
             }
         )
 
@@ -815,6 +816,7 @@ def update_repayment():
     customPenaltyCheck = data["customPenaltyCheck"]
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
+    amount_due = float(data["amountDue"])
 
     
     if status !="partial":
@@ -861,7 +863,7 @@ def update_repayment():
             if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
                 next_month_penalty =500
                 #print(next_month_penalty)
-                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number,float(penalty),float(recoveryAgentAmount),float(total_amount_due))
+                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number,float(penalty),float(recoveryAgentAmount),float(amount_due))
                 #print("db updated")
 
         
