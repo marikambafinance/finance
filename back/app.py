@@ -168,6 +168,8 @@ def apply_monthly_penalties_new():
     try:
         remainder_collection = db.repayments
         current_date = datetime.now(ZoneInfo("Asia/Kolkata"))
+        active_loans_cursor = db.loans.find({"status":{"$eq":"active"}},{"loanId":1,"_id":0})
+        active_loan_ids = [doc["loanId"] for doc in active_loans_cursor]
         overdue_repayments = remainder_collection.find({
             "status": {"$ne": "paid"},
             "dueDate": {"$lt": current_date} # Initial filter: due date is in the past
@@ -176,35 +178,36 @@ def apply_monthly_penalties_new():
         bulk_updates = []
         for repayment in overdue_repayments:
             repayment_id = repayment['_id']
-            due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
-            due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-            total_amount_due = float(repayment["totalAmountDue"])
-            emi = float(repayment["amountDue"])
-            updatedOn = repayment.get("updatedOn",None)
-            recoveryAgentAmount = float(repayment.get("recoveryAgentAmount",0))
-       
-            if updatedOn:
-                updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+            if repayment["loanId"] in active_loan_ids:
+                due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
+                due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                total_amount_due = float(repayment["totalAmountDue"])
+                emi = float(repayment["amountDue"])
+                updatedOn = repayment.get("updatedOn",None)
+                recoveryAgentAmount = float(repayment.get("recoveryAgentAmount",0))
         
-            if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
-                pass
-            else:
-                #previousDues = float(repayment.get("previousDues",0))
-                penalty,months = calculate_penalty(due_date,current_date)
-                bulk_updates.append(
-                    {
-                        "filter": {"_id": repayment_id},
-                        "update": {
-                            "$set": {
-                                "updatedOn": current_date, # Set last update time
-                                "TotalPenaltyMonths": months,
-                                "penalty": penalty,
-                                "totalAmountDue":str(emi+penalty+recoveryAgentAmount),
-                                "totalPenalty":penalty +recoveryAgentAmount
-                                }
+                if updatedOn:
+                    updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+            
+                if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
+                    pass
+                else:
+                    #previousDues = float(repayment.get("previousDues",0))
+                    penalty,months = calculate_penalty(due_date,current_date)
+                    bulk_updates.append(
+                        {
+                            "filter": {"_id": repayment_id},
+                            "update": {
+                                "$set": {
+                                    "updatedOn": current_date, # Set last update time
+                                    "TotalPenaltyMonths": months,
+                                    "penalty": penalty,
+                                    "totalAmountDue":str(emi+penalty+recoveryAgentAmount),
+                                    "totalPenalty":penalty +recoveryAgentAmount
+                                    }
+                            }
                         }
-                    }
-                )
+                    )
         if bulk_updates:
         # Execute bulk updates
             req = []
@@ -218,7 +221,6 @@ def apply_monthly_penalties_new():
             return jsonify({"status":"Success","message":"No records to update"}),200
     except Exception as e:
         return jsonify({"status":"error","message":str(e)})
-
 
 if __name__ == '__main__':
     app.run()
