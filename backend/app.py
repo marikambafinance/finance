@@ -1355,7 +1355,7 @@ def foreclose():
     status  = loan["status"]
     loan_amount = loan["loanAmount"]
     hpNumber =  loan["hpNumber"]
-    totalAmountDue =loan["totalAmountDue"]
+    totalAmountDue =loan["totalPaid"]
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
 
     recent_install = db.repayments.find_one(
