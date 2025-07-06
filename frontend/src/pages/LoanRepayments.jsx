@@ -16,19 +16,13 @@ import useForeclosure from "../hooks/useForeclosure";
 const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const { loanId, hpNumber } = useParams();
+  const [partialFlag, setPartialFlag] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
   const navigate = useNavigate();
   const [payMode, setPayMode] = useState("");
 
   const { loanList } = useLoanListContext();
-
-  const { handleForeclose } = useForeclosure(
-    setLoading,
-    setRefreshFlag,
-    loanId,
-    payMode
-  );
 
   const [loanDetails, setLoanDetails] = useState(null);
 
@@ -39,9 +33,35 @@ const LoanRepayments = () => {
   const [filteredRepayments, setFilteredRepayments] = useState([]);
   const { handleAutoPayment } = useAutoPayment(setLoading);
 
-  console.log(repayments);
+  console.log(loanDetails);
 
   const { register, handleSubmit, reset } = useForm();
+
+  const fetchForecloseBalance = async () => {
+    const res = await fetch(
+      "https://mariamma-finance.onrender.com/foreclose_balance",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "marikambafinance@123",
+        },
+        body: JSON.stringify({ loanId }),
+      }
+    );
+    const data = await res.json();
+    console.log(data);
+    return data;
+  };
+
+  const { handleForeclose } = useForeclosure(
+    setLoading,
+    setRefreshFlag,
+    loanId,
+    payMode,
+    fetchForecloseBalance,
+    partialFlag
+  );
 
   const onSubmit = async (data) => {
     if (!data.amount) return;
@@ -82,6 +102,17 @@ const LoanRepayments = () => {
       setFilteredRepayments(repayments);
     }
   }, [loanDetails, repayments]);
+
+  useEffect(() => {
+    const hasPaid = filteredRepayments.some((item) => item.status === "paid");
+    const hasPartial = repayments.some((item) => item.status === "partial");
+
+    if (!hasPaid || hasPartial) {
+      setPartialFlag(true);
+    } else {
+      setPartialFlag(false);
+    }
+  }, [repayments, filteredRepayments]);
 
   const fullName =
     loanList?.customerDetails?.firstName +
@@ -238,7 +269,7 @@ const LoanRepayments = () => {
                   hpNumber={hpNumber}
                 />
               ))}
-              <ForeclosedNotice />
+              {loanDetails?.status === "foreclosed" ? <ForeclosedNotice /> : ""}
             </div>
           </div>
         )}
