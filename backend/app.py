@@ -979,61 +979,181 @@ def dashboard_stats():
                     "_id": None,
                     "totalLoans": {"$sum": 1},
                     "activeLoans": {"$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}},
-                    "closedLoans": {"$sum": {"$cond": [{"$eq": ["$status", "closed"]}, 1, 0]}},
+                    "closedLoans": {"$sum": {"$cond": [{"$ne": ["$status", "active"]}, 1, 0]}},
                     "amountIssued": {"$sum": {"$toDouble": "$loanAmount"}}
                 }
             }
         ])
         loan_data = next(loan_stats, {})
+        ledger_stats = db.ledger.aggregate([
+                {
+                    "$group": {
+                        "_id": None,
+                        "totalAmountIssued": { "$sum": { "$toDouble": "$amountIssued" } },
+                        "totalAmountPaid": { "$sum": { "$toDouble": "$amountPaid" } }
+                    }
+                }
+            ])
+        ledger_data = next(ledger_stats, {})
+        total_amount_issued = ledger_data.get("totalAmountIssued", 0)
+        total_amount_paid = ledger_data.get("totalAmountPaid", 0)
+        
 
         # Repayment Aggregates
         repayment_stats = db.repayments.aggregate([
                 {
+                    "$lookup": {
+                        "from": "loans",
+                        "localField": "loanId",
+                        "foreignField": "loanId",
+                        "as": "loan"
+                    }
+                },
+                { "$unwind": "$loan" },
+                {
                     "$facet": {
-                        "total": [
-                            {"$count": "totalCount"}
-                        ],
-                        "paid": [
-                            {"$match": {"status": "paid"}},
+                        "overall": [
                             {
                                 "$group": {
                                     "_id": None,
-                                    "amountReceived": {"$sum": {"$toDouble": "$amountPaid"}},
-                                    "paidCount": {"$sum": 1},
-                                    "penaltyAmount": {"$sum": {"$toDouble": "$penalty"}},
-                                    "recoveryCount": {
+                                    "totalPenalty": { "$sum": { "$toDouble": "$penalty" } },
+                                    "recoveryAgentAmount": {
                                         "$sum": {
                                             "$cond": [
-                                                {"$eq": ["$recoveryAgent", True]},
-                                                1,
+                                                { "$eq": ["$recoveryAgent", True] },
+                                                { "$toDouble": "$amountPaid" },
                                                 0
                                             ]
                                         }
                                     }
                                 }
                             }
+                        ],
+                        "activePaid": [
+                            { "$match": { "status": "paid", "loan.status": "active" } },
+                            {
+                                "$group": {
+                                    "_id": None,
+                                    "paidCount": { "$sum": 1 }
+                                }
+                            }
+                        ],
+                        "activeTotal": [
+                            { "$match": { "loan.status": "active" } },
+                            {
+                                "$count": "totalActiveRepayments"
+                            }
                         ]
                     }
                 }
             ])
-        stats = next(repayment_stats, {})
-        paid_data_list = stats.get("paid", [])
-        paid_data = paid_data_list[0] if paid_data_list else {}
-        paid_count = paid_data.get("paidCount", 0)
-        total_data_list = stats.get("total", [])
-        total_count = total_data_list[0].get("totalCount", 0) if total_data_list else 0
+
+            # Process the results
+        repayment_data = next(repayment_stats, {})
+        overall_list = repayment_data.get("overall", [])
+        overall_data = overall_list[0] if overall_list else {}
+
+        active_paid_list = repayment_data.get("activePaid", [])
+        active_paid_data = active_paid_list[0] if active_paid_list else {}
+
+        active_total_list = repayment_data.get("activeTotal", [])
+        active_total_data = active_total_list[0] if active_total_list else {}
+
+        # Extract fields
+        total_penalty = overall_data.get("totalPenalty", 0)
+        recovery_agent_amount = overall_data.get("recoveryAgentAmount", 0)
+        paid_count_active_loans = active_paid_data.get("paidCount", 0)
+        total_active_repayment_count = active_total_data.get("totalActiveRepayments", 0)
 
         # Interest collected
-        interest_data = db.repayments.aggregate([
-            {"$match": {"status": "paid"}},
+        active_interest = db.repayments.aggregate([
+            {
+                "$lookup": {
+                    "from": "loans",
+                    "localField": "loanId",
+                    "foreignField": "loanId",
+                    "as": "loan"
+                }
+            },
+            { "$unwind": "$loan" },
+            {
+                "$match": {
+                    "status": "paid",
+                    "loan.status": "active"
+                }
+            },
             {
                 "$group": {
                     "_id": None,
-                    "interestCollected": {"$sum": {"$toDouble": "$interestAmount"}}
+                    "interestCollected": {
+                        "$sum": { "$toDouble": "$interestAmount" }
+                    }
                 }
             }
         ])
-        interest = next(interest_data, {"interestCollected": 0})
+        active_interest_data = next(active_interest, {})
+        interest_active = active_interest_data.get("interestCollected", 0)
+
+        # 2. Interest from closed loans (loan.interestAmount)
+        closed_interest = db.loans.aggregate([
+            {
+                "$match": { "status": "closed" }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "interestCollected": {
+                        "$sum": { "$toDouble": "$interestAmount" }
+                    }
+                }
+            }
+        ])
+        closed_interest_data = next(closed_interest, {})
+        interest_closed = closed_interest_data.get("interestCollected", 0)
+
+        # 3. Foreclosed loans: sum of interest from repayments + one extra installment
+        foreclosed_interest = db.repayments.aggregate([
+            {
+                "$lookup": {
+                    "from": "loans",
+                    "localField": "loanId",
+                    "foreignField": "loanId",
+                    "as": "loan"
+                }
+            },
+            { "$unwind": "$loan" },
+            {
+                "$match": {
+                    "status": "paid",
+                    "loan.status": "foreclosed"
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$loanId",
+                    "totalInterest": { "$sum": { "$toDouble": "$interestAmount" } },
+                    "oneInstallmentInterest": { "$first": { "$toDouble": "$interestAmount" } }
+                }
+            },
+            {
+                "$project": {
+                    "totalWithForeclosure": {
+                        "$add": ["$totalInterest", "$oneInstallmentInterest"]
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "interestCollected": { "$sum": "$totalWithForeclosure" }
+                }
+            }
+        ])
+        foreclosed_interest_data = next(foreclosed_interest, {})
+        interest_foreclosed = foreclosed_interest_data.get("interestCollected", 0)
+
+        # Combine total interest
+        total_interest_collected = round(interest_active + interest_closed + interest_foreclosed, 2)
 
         # Recent
         new_customers = db.customers.count_documents({"InsertedOn": {"$gte": first_of_month}})
@@ -1064,7 +1184,7 @@ def dashboard_stats():
         ]))
         defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
         total_overdue = round(sum(d["overdueAmount"] for d in defaulters), 2)
-        repayment_rate = round((paid_count / total_count) * 100, 2) if total_count else 0
+        repayment_rate = round((paid_count_active_loans / total_active_repayment_count) * 100, 2) if total_active_repayment_count else 0
 
         # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
@@ -1078,11 +1198,11 @@ def dashboard_stats():
                 "loans": total_loans,
                 "activeLoans": loan_data.get("activeLoans", 0),
                 "closedLoans": loan_data.get("closedLoans", 0),
-                "amountIssued": round(amount_issued, 2),
-                "amountReceived": round(paid_data.get("amountReceived", 0), 2),
-                "interestCollected": round(interest.get("interestCollected", 0), 2),
-                "penaltyAmount": round(paid_data.get("penaltyAmount", 0), 2),
-                "recoveryAgentAmount": paid_data.get("recoveryCount", 0) * 500
+                "amountIssued": round(total_amount_issued, 2),
+                "amountReceived": round(float(total_amount_paid), 2),
+                "interestCollected": round(float(total_interest_collected), 2),
+                "penaltyAmount": round(float(total_penalty), 2),
+                "recoveryAgentAmount": round(float(recovery_agent_amount),2)
             },
             "averages": {
                 "loanSize": avg_loan,
