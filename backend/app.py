@@ -980,7 +980,8 @@ def dashboard_stats():
                     "totalLoans": {"$sum": 1},
                     "activeLoans": {"$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}},
                     "closedLoans": {"$sum": {"$cond": [{"$ne": ["$status", "active"]}, 1, 0]}},
-                    "amountIssued": {"$sum": {"$toDouble": "$loanAmount"}}
+                    "amountIssued": {"$sum": {"$toDouble": "$loanAmount"}},
+                    "foreClosedInterest": {"$sum":{"$toDouble": "$foreCloseNetInterest"}}
                 }
             }
         ])
@@ -1112,45 +1113,8 @@ def dashboard_stats():
         interest_closed = closed_interest_data.get("interestCollected", 0)
 
         # 3. Foreclosed loans: sum of interest from repayments + one extra installment
-        foreclosed_interest = db.repayments.aggregate([
-            {
-                "$lookup": {
-                    "from": "loans",
-                    "localField": "loanId",
-                    "foreignField": "loanId",
-                    "as": "loan"
-                }
-            },
-            { "$unwind": "$loan" },
-            {
-                "$match": {
-                    "status": "paid",
-                    "loan.status": "foreclosed"
-                }
-            },
-            {
-                "$group": {
-                    "_id": "$loanId",
-                    "totalInterest": { "$sum": { "$toDouble": "$interestAmount" } },
-                    "oneInstallmentInterest": { "$first": { "$toDouble": "$interestAmount" } }
-                }
-            },
-            {
-                "$project": {
-                    "totalWithForeclosure": {
-                        "$add": ["$totalInterest", "$oneInstallmentInterest"]
-                    }
-                }
-            },
-            {
-                "$group": {
-                    "_id": None,
-                    "interestCollected": { "$sum": "$totalWithForeclosure" }
-                }
-            }
-        ])
-        foreclosed_interest_data = next(foreclosed_interest, {})
-        interest_foreclosed = foreclosed_interest_data.get("interestCollected", 0)
+        
+        interest_foreclosed = loan_data.get("foreClosedInterest", 0)
 
         # Combine total interest
         total_interest_collected = round(interest_active + interest_closed + interest_foreclosed, 2)
@@ -1391,7 +1355,8 @@ def foreclose():
 # Extract the result
     total_penalty_data = next(total_penalty_cursor, {})
     total_penalty = total_penalty_data.get("total_Penalty", 0)
-    totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
+    foreCloseNetInterest = round((float(recent_installment+1)*monthly_interest),2)
+    totalPayable = float(loan_amount) + foreCloseNetInterest + float(total_penalty)
     pending_balance = float(totalPayable)-float(paid_till_date)
     totalPaid = totalPayable
 
@@ -1405,7 +1370,8 @@ def foreclose():
                         "totalPayable": totalPayable,
                         "totalAmountDue": "0",
                         "updatedOn": datetime.now(),
-                        "totalPaid":float(totalPaid)
+                        "totalPaid":float(totalPaid),
+                        "foreCloseNetInterest":foreCloseNetInterest
                     }
                 }
             )
@@ -1474,7 +1440,8 @@ def foreclose_balance():
     # Extract the result
         total_penalty_data = next(total_penalty_cursor, {})
         total_penalty = total_penalty_data.get("total_Penalty", 0)
-        totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
+        foreCloseNetInterest = round((float(recent_installment+1)*monthly_interest),2)
+        totalPayable = float(loan_amount) + foreCloseNetInterest + float(total_penalty)
         pending_balance = float(totalPayable)-float(paid_till_date)
         return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2)})
     except Exception as e:
