@@ -1362,7 +1362,8 @@ def foreclose():
                                     {
                                             "hpNumber": hpNumber,
                                             "loanId": loan_id,
-                                            "status": { "$eq": "paid" }
+                                            "status": { "$in": ["paid", "partial"] }
+                                                        
                                         },
                                     {"installmentNumber": 1, "_id": 0},
                                     sort=[("installmentNumber", 1)]
