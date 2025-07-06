@@ -1390,7 +1390,7 @@ def foreclose():
     total_penalty_data = next(total_penalty_cursor, {})
     total_penalty = total_penalty_data.get("total_Penalty", 0)
     totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
-    totalAmountDue = totalPayable-loan_amount
+    totalAmountDue = float(totalPayable)-float(loan_amount)
     totalPaid = totalPayable
 
     if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
