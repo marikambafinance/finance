@@ -1392,7 +1392,7 @@ def foreclose():
     total_penalty_data = next(total_penalty_cursor, {})
     total_penalty = total_penalty_data.get("total_Penalty", 0)
     totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
-    paid_till_date = float(totalPayable)-float(paid_till_date)
+    pending_balance = float(totalPayable)-float(paid_till_date)
     totalPaid = totalPayable
 
     if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
@@ -1417,7 +1417,7 @@ def foreclose():
                 "paymentMode": paymentMode,  # <-- Make sure this is a date, not a variable misused
                 "createdOn": datetime.now(),
                 "paymentDate": datetime.now(),
-                "amountPaid": round(paid_till_date, 2)
+                "amountPaid": round(pending_balance, 2)
             })
             if update.modified_count > 0:
                 return jsonify({"status": "success", "message": "DB updated successfully"}),200
@@ -1428,6 +1428,58 @@ def foreclose():
             return jsonify({"status": "error", "message": str(e)})
     else:
         return jsonify({"status": "error", "message": "Loan was already closed"})
+
+
+@app.route("/foreclose_balance",methods=["POST","OPTIONS"])
+def foreclose_balance():
+    try:
+        data = request.get_json(force=True)
+        loan_id =data["loanId"]
+        loan =  db.loans.find_one({"loanId":loan_id})
+        loan_amount = loan["loanAmount"]
+        hpNumber =  loan["hpNumber"]
+        paid_till_date =loan.get("totalPaid",0)
+        monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
+
+        recent_install = db.repayments.find_one(
+                                        {
+                                                "hpNumber": hpNumber,
+                                                "loanId": loan_id,
+                                                "status": { "$in": ["paid", "partial"] }
+                                                            
+                                            },
+                                        {"installmentNumber": 1, "_id": 0},
+                                        sort=[("installmentNumber", -1)]
+                                    )
+        recent_installment = recent_install["installmentNumber"] if recent_install else 0
+        total_penalty_cursor = db.repayments.aggregate([
+                {
+                    "$match": {
+                        "hpNumber": hpNumber,
+                        "loanId": loan_id
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": None,
+                        "total_Penalty": {
+                            "$sum": {
+                                "$toDouble": "$totalPenalty"
+                            }
+                        }
+                    }
+                }
+            ])
+
+    # Extract the result
+        total_penalty_data = next(total_penalty_cursor, {})
+        total_penalty = total_penalty_data.get("total_Penalty", 0)
+        totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
+        pending_balance = float(totalPayable)-float(paid_till_date)
+        return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2)})
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)})
+
 
 @app.route("/")
 def home():
