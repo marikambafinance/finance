@@ -1389,7 +1389,7 @@ def foreclose():
 # Extract the result
     total_penalty_data = next(total_penalty_cursor, {})
     total_penalty = total_penalty_data.get("total_Penalty", 0)
-    totalPayable = loan_amount + (recent_installment+1)*monthly_interest + total_penalty
+    totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
     totalAmountDue = totalPayable-loan_amount
     totalPaid = totalPayable
 
