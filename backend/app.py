@@ -1184,7 +1184,7 @@ def dashboard_stats():
         ]))
         defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
         total_overdue = round(sum(d["overdueAmount"] for d in defaulters), 2)
-        repayment_rate = round((paid_count_active_loans / total_active_repayment_count) * 100, 2) if total_active_repayment_count else 0
+        repayment_rate = round((paid_count_active_loans / total_active_repayment_count) * 100, 2) if total_active_repayment_count else 100
 
         # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
