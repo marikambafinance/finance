@@ -1353,13 +1353,10 @@ def foreclose():
     paymentMode =  data["paymentMode"]
     loan =  db.loans.find_one({"loanId":loan_id})
     status  = loan["status"]
-    totalPayable = float(loan["totalPayable"])
-    totalAmountDue =  float(loan["totalAmountDue"])
+    loan_amount = loan["loanAmount"]
     hpNumber =  loan["hpNumber"]
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
-    totalPayable += monthly_interest
-    totalAmountDue +=monthly_interest
-    totalPaid = totalPayable
+
     recent_install = db.repayments.find_one(
                                     {
                                             "hpNumber": hpNumber,
@@ -1370,6 +1367,32 @@ def foreclose():
                                     sort=[("installmentNumber", 1)]
                                 )
     recent_installment = recent_install["installmentNumber"] if recent_install else 1
+    total_penalty_cursor = db.repayments.aggregate([
+            {
+                "$match": {
+                    "hpNumber": hpNumber,
+                    "loanId": loan_id
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "total_Penalty": {
+                        "$sum": {
+                            "$toDouble": "$totalPenalty"
+                        }
+                    }
+                }
+            }
+        ])
+
+# Extract the result
+    total_penalty_data = next(total_penalty_cursor, {})
+    total_penalty = total_penalty_data.get("totalPenalty", 0)
+    totalPayable = loan_amount + (recent_installment+1)*monthly_interest + total_penalty
+    totalAmountDue = totalPayable-loan_amount
+    totalPaid = totalPayable
+
     if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
         try:
             update = db.loans.update_one(
