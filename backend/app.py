@@ -450,8 +450,8 @@ def insert_loan_data(loan_data):
         "loanId": loan_data["loanId"],
         "paymentId": generate_unique_payment_id(),
         "paymentMode": "cash",
-        "amountIssued": loan_data["totalAmountDue"],
-        "actualAmountIssued":loan_data["totalAmountDue"],
+        "amountIssued": loan_data["loanAmount"],
+        "actualAmountIssued":loan_data["loanAmount"],
         "paymentDate": datetime.now(),
         "createdOn": datetime.now(),
         "amountPaid":0
