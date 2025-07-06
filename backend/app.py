@@ -1366,7 +1366,7 @@ def foreclose():
                                                         
                                         },
                                     {"installmentNumber": 1, "_id": 0},
-                                    sort=[("installmentNumber", 1)]
+                                    sort=[("installmentNumber", -1)]
                                 )
     recent_installment = recent_install["installmentNumber"] if recent_install else 0
     total_penalty_cursor = db.repayments.aggregate([
