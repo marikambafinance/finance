@@ -1358,6 +1358,7 @@ def foreclose():
     hpNumber =  loan["hpNumber"]
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
     totalPayable += monthly_interest
+    totalAmountDue +=monthly_interest
     totalPaid = totalPayable
     recent_install = db.repayments.find_one(
                                     {
@@ -1368,7 +1369,7 @@ def foreclose():
                                     {"installmentNumber": 1, "_id": 0},
                                     sort=[("installmentNumber", 1)]
                                 )
-    recent_installment = recent_install.get("installmentNumber",1)
+    recent_installment = recent_install["installmentNumber"] if recent_install else 1
     if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
         try:
             update = db.loans.update_one(
@@ -1391,7 +1392,7 @@ def foreclose():
                 "paymentMode": paymentMode,  # <-- Make sure this is a date, not a variable misused
                 "createdOn": datetime.now(),
                 "paymentDate": datetime.now(),
-                "amountPaid": round(totalPaid, 2)
+                "amountPaid": round(totalAmountDue, 2)
             })
             if update.modified_count > 0:
                 return jsonify({"status": "success", "message": "DB updated successfully"}),200
