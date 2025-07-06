@@ -1391,7 +1391,7 @@ def foreclose():
                 "paymentMode": paymentMode,  # <-- Make sure this is a date, not a variable misused
                 "createdOn": datetime.now(),
                 "paymentDate": datetime.now(),
-                "amountPaid": round(totalAmountDue, 2)
+                "amountPaid": round(totalPaid, 2)
             })
             if update.modified_count > 0:
                 return jsonify({"status": "success", "message": "DB updated successfully"}),200
