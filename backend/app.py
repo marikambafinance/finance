@@ -1355,6 +1355,7 @@ def foreclose():
     status  = loan["status"]
     loan_amount = loan["loanAmount"]
     hpNumber =  loan["hpNumber"]
+    totalAmountDue =loan["totalAmountDue"]
     monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
 
     recent_install = db.repayments.find_one(
@@ -1366,7 +1367,7 @@ def foreclose():
                                     {"installmentNumber": 1, "_id": 0},
                                     sort=[("installmentNumber", 1)]
                                 )
-    recent_installment = recent_install["installmentNumber"] if recent_install else 1
+    recent_installment = recent_install["installmentNumber"] if recent_install else 0
     total_penalty_cursor = db.repayments.aggregate([
             {
                 "$match": {
@@ -1390,7 +1391,7 @@ def foreclose():
     total_penalty_data = next(total_penalty_cursor, {})
     total_penalty = total_penalty_data.get("total_Penalty", 0)
     totalPayable = float(loan_amount) + float(recent_installment+1)*monthly_interest + float(total_penalty)
-    totalAmountDue = float(totalPayable)-float(loan_amount)
+    totalAmountDue = float(totalPayable)-float(totalAmountDue)
     totalPaid = totalPayable
 
     if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
