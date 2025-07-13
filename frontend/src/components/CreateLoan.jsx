@@ -40,7 +40,7 @@ const CreateLoanPage = () => {
       return;
     }
 
-    const interestAmount = ((loanAmount * (loanTerm/100) * (interestRate)))/100 * loanTerm;
+    const interestAmount = ((loanAmount * loanTerm * interestRate))/100;
       
     const totalPayable = loanAmount + interestAmount;
     const monthlyEMI = totalPayable / loanTerm;
