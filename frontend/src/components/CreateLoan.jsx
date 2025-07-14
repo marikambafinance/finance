@@ -155,6 +155,7 @@ const CreateLoanPage = () => {
               <option value="6">6 Months</option>
               <option value="10">10 Months</option>
               <option value="12">12 Months</option>
+              <option value="15">15 Months</option>
               <option value="18">18 Months</option>
               <option value="24">24 Months</option>
               <option value="36">36 Months</option>
