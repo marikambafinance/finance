@@ -134,6 +134,7 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
     
 
 
+# --- In your DB helper function ---
 def insert_customer(customer_data):
     is_duplicate, reason = is_duplicate_customer(
         customer_data.get("hpNumber"),
@@ -141,15 +142,18 @@ def insert_customer(customer_data):
         customer_data.get("email"),
         customer_data.get("phoneNumber"),
     )
+
     if is_duplicate:
-        return jsonify({"status": "error", "message": f"Duplicate found: {reason}"}), 409
-    else:
-        unique_number = generate_secure_id(customer_data["firstName"],customer_data["lastName"])
-        customer_data["hpNumber"]= unique_number
-        customer_data["InsertedOn"]= datetime.now(ZoneInfo("Asia/Kolkata"))
-        result = collection.insert_one(customer_data)
-        customer_data.pop("_id",None)
-        return {"insert_id": str(result.inserted_id),"data":customer_data}
+        return {"status": "error", "message": f"Duplicate found: {reason}"}
+
+    unique_number = generate_secure_id(customer_data["firstName"], customer_data["lastName"])
+    customer_data["hpNumber"] = unique_number
+    customer_data["InsertedOn"] = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+    result = collection.insert_one(customer_data)
+    customer_data.pop("_id", None)
+
+    return {"status": "success", "insert_id": str(result.inserted_id), "data": customer_data}
 
 def total_loan_payable(hpNumber):
     pipeline = [
@@ -548,16 +552,17 @@ def submit_data():
     try:
         data = request.get_json(force=True)
         res = insert_customer(data)
-        #print(result)
-        if "error" in res:
-            return jsonify({"status": "error", "message": res["error"]}), 400
 
-        return jsonify({"status": "success", "response":res["data"]}), 200
+        if res.get("status") == "error":
+            return jsonify({"status": "error", "message": res["message"]}), 409
+
+        return jsonify({"status": "success", "response": res["data"]}), 200
 
     except Exception as e:
-        
-        traceback.print_exc()  # prints full error traceback to logs
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
 
 @app.route("/customers", methods=["GET","OPTIONS"])
 def get_all_customers():
