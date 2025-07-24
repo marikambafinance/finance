@@ -507,7 +507,7 @@ def close_loan_if_fully_paid(loan_id, installment_number):
             "status": "error",
             "message": str(e)
         }
-"""
+
 @app.before_request
 def global_auth_check():
     exempt_routes = ['home']
@@ -520,7 +520,7 @@ def global_auth_check():
         api_key = hashlib.sha256(api_key.encode()).hexdigest()
     if not api_key or api_key != EXPECTED_API_KEY:
         return jsonify({'message': 'Unauthorized'}), 401
-"""
+
 @app.route("/search",methods=["POST","OPTIONS"])
 def search():
     data = request.get_json(force=True)
