@@ -13,11 +13,13 @@ from zoneinfo import ZoneInfo
 from twilio.rest import Client
 import time
 import pymongo
+from pymongo import MongoClient, UpdateOne
 from dateutil.relativedelta import relativedelta
 import smtplib
 from email.mime.text import MIMEText
 import hashlib
 from dotenv import load_dotenv
+from  threading import Thread
 
 
 app = Flask(__name__)
@@ -110,6 +112,59 @@ def is_not_greater_than_one_month(start_date, end_date):
     return True
 
 
+def update_total_penalties():
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$loanId",
+                "totalPenaltySum": {
+                    "$sum": {
+                        "$add": [
+                            { "$toDouble": { "$ifNull": ["$penalty", 0] } },
+                            { "$toDouble": { "$ifNull": ["$recoveryAgentAmount", 0] } }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+
+    penalty_totals = db.repayments.aggregate(pipeline)
+
+    bulk_updates = []
+    for doc in penalty_totals:
+        loan = db.loans.find_one({ "loanId": doc["_id"], "status": "active" }, { "penaltyPaid": 1 })
+        if loan:
+            penalty_paid = float(loan.get("penaltyPaid", 0))
+            total_penalty = float(doc["totalPenaltySum"])
+            penalty_balance = total_penalty - penalty_paid
+
+            bulk_updates.append(
+                UpdateOne(
+                    { "loanId": doc["_id"], "status": "active" },
+                    {
+                        "$set": {
+                            "totalPenalty": total_penalty,
+                            "penaltyBalance": penalty_balance
+                        }
+                    }
+                )
+            )
+
+    if bulk_updates:
+        result = db.loans.bulk_write(bulk_updates)
+        return jsonify({
+            "status": "success",
+            "message": f"Updated {result.modified_count} active loan documents."
+        }), 200
+    else:
+        return jsonify({
+            "status": "error",
+            "message": "No penalties found to update."
+        }), 400
+
+    
+
 def calculate_months_overdue(due_date, current_date,GRACE_PERIOD_DAYS):
     if current_date < due_date + timedelta(days=GRACE_PERIOD_DAYS):
         return 0
@@ -161,7 +216,6 @@ def home():
     return jsonify({"message": "API is running"})
 
 
-@app.route("/update_penalty_new", methods=['GET',"OPTIONS"])
 def apply_monthly_penalties_new(): 
     PENALTY_PER_MONTH = 300
     GRACE_PERIOD_DAYS = 5
@@ -181,10 +235,7 @@ def apply_monthly_penalties_new():
             if repayment["loanId"] in active_loan_ids:
                 due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
                 due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-                total_amount_due = float(repayment["totalAmountDue"])
-                emi = float(repayment["amountDue"])
                 updatedOn = repayment.get("updatedOn",None)
-                recoveryAgentAmount = float(repayment.get("recoveryAgentAmount",0))
         
                 if updatedOn:
                     updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
@@ -202,8 +253,6 @@ def apply_monthly_penalties_new():
                                     "updatedOn": current_date, # Set last update time
                                     "TotalPenaltyMonths": months,
                                     "penalty": penalty,
-                                    "totalAmountDue":str(emi+penalty+recoveryAgentAmount),
-                                    "totalPenalty":penalty +recoveryAgentAmount
                                     }
                             }
                         }
@@ -216,11 +265,25 @@ def apply_monthly_penalties_new():
                     pymongo.UpdateOne(item["filter"], item["update"])
                 )
             result = remainder_collection.bulk_write(req)
-            return jsonify({"status":"Success","message":f"Penalties updated for {result.modified_count}"}),200
+            update_total_penalties()
+            print(f"status:Success,message:Penalties updated for {result.modified_count}")
         else:
-            return jsonify({"status":"Success","message":"No records to update"}),200
+            print("status: Success,message:No records to update")
     except Exception as e:
-        return jsonify({"status":"error","message":str(e)})
+        print(f"status:error,message:{str(e)}")
+
+
+
+@app.route("/update_penalty_new", methods=['GET',"OPTIONS"])
+def calculate_monthly_penalty():
+    try:
+        # Start the penalty application in a background thread
+        thread = Thread(target=apply_monthly_penalties_new)
+        thread.start()
+        return jsonify({"status": "Processing", "message": "Penalty update started in background."}), 202
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run()
