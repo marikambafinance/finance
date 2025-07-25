@@ -1467,7 +1467,7 @@ def pay_penalty():
     if missing:
         return jsonify({"status":"error", "message":f"Missing required fields: {', '.join(missing)}"}), 400
     data = request.get_json(force=True)
-    paid_penalty = round(float(data["penaltyDuePaid"],2))
+    paid_penalty = round(float(data["penaltyDuePaid"]),2)
     loan_id = data["loanId"]
     penaltyBalance = round(float(data["penaltyBalance"]),2)
     penaltyBalance -= paid_penalty
