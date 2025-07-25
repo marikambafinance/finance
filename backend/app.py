@@ -455,7 +455,7 @@ def insert_loan_data(loan_data):
         # Calculate flat monthly interest
         monthly_interest = round(((loan_amount)*(interest_rate/100)),2)
         loan_data["monthlyInterestAmount"] =monthly_interest
-        
+
 
 
         result = db.loans.insert_one(loan_data)
@@ -1457,6 +1457,25 @@ def foreclose_balance():
         return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2)})
     except Exception as e:
         return jsonify({"status":"error","message":str(e)})
+    
+@app.route("/pay_penalty",methods=["POST","OPTIONS"])
+def pay_penalty():
+    data = request.get_json(force=True)
+    paid_penalty = round(float(data["penaltyPaid"],2))
+    loan_id = data["loanId"]
+    penaltyBalance = round(float(data["penaltyBalance"]),2)
+    penaltyBalance -= paid_penalty
+    if penaltyBalance  < 0:
+        return jsonify({"status":"error","message":"Penalty already paid"}),400
+    
+    db.loans.update_one(
+            { "loanId": loan_id },
+            {
+                "$inc": { "penaltyPaid": paid_penalty },
+                "$set": { "penaltyBalance": penaltyBalance }
+            }
+        )
+    return jsonify({"status":"success","message":"Penalty updated !"}),200
 
 
 @app.route("/")
