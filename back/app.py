@@ -113,7 +113,7 @@ def is_not_greater_than_one_month(start_date, end_date):
 
 
 def update_total_penalties():
-    pipeline = [
+    pipeline = [ 
         {
             "$group": {
                 "_id": "$loanId",
@@ -133,7 +133,7 @@ def update_total_penalties():
 
     bulk_updates = []
     for doc in penalty_totals:
-        loan = db.loans.find_one({ "loanId": doc["_id"], "status": "active" }, { "penaltyPaid": 1 })
+        loan = db.loans.find_one({ "loanId": doc["_id"], "status": "active" })
         if loan:
             penalty_paid = float(loan.get("penaltyPaid", 0))
             total_penalty = float(doc["totalPenaltySum"])
