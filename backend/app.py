@@ -1472,7 +1472,7 @@ def pay_penalty():
     paid_penalty = paid_due_paid + penalty_paid
     loan_id = data["loanId"]
     penaltyBalance = round(float(data["penaltyBalance"]),2)
-    penaltyBalance -= paid_penalty
+    penaltyBalance -= paid_due_paid
     hpNumber = data["hpNumber"]
     paymentMode = data["paymentMode"]
     if penaltyBalance  < 0:
