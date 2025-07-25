@@ -117,7 +117,6 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "paymentId": None,
                 "paymentMode": None,
                 "penalty": 0,
-                "totalPenalty":0,
                 "recoveryAgentAmount":0,
                 "customPenalty":0,
                 "totalAmountDue": str(emi),
@@ -449,7 +448,16 @@ def insert_loan_data(loan_data):
         loan_data["totalAmountDue"] =loan_data["totalPayable"]
         loan_data["totalPenalty"]="0"
         loan_data["penaltyPaid"]="0"
+        loan_data["penaltyBalance"]=loan_data["totalPenalty"]
         loan_data["initialTotalPay"]=loan_data["totalPayable"]
+        loan_amount = loan_data.get("loanAmount", 0)
+        interest_rate = float(loan_data.get("interestRate", 0))  # percentage
+        # Calculate flat monthly interest
+        monthly_interest = round(((loan_amount)*(interest_rate/100)),2)
+        loan_data["monthlyInterestAmount"] =monthly_interest
+        
+
+
         result = db.loans.insert_one(loan_data)
         loan_data.pop("_id",None)
         db.ledger.insert_one({
@@ -800,8 +808,8 @@ def update_repayment():
     data = request.get_json(force=True)
     required_keys = {
         "amountPaid", "status", "paymentMode", "recoveryAgent",
-        "totalAmountDue", "loanId", "installmentNumber","penalty","totalPenalty","recoveryAgentAmount","customPenalty","remainingPayment",
-        "customPenaltyCheck"
+        "totalAmountDue", "loanId", "installmentNumber","penalty","recoveryAgentAmount","remainingPayment",
+        
     }
 
     missing_keys = required_keys - data.keys()
@@ -820,11 +828,8 @@ def update_repayment():
     recovery_agent = data["recoveryAgent"]
     total_amount_due = float(data.get("totalAmountDue", 0)) # convert to float if stored as numeric in DB
     penalty = str(data["penalty"])
-    totalPenalty = data.get("totalPenalty",0)
-    recoveryAgentAmount = str(data.get("recoveryAgentAmount",0))
-    customPenalty = str(data["customPenalty"])
-    remainingPayment =round(float(data["remainingPayment"]),2)
-    customPenaltyCheck = data["customPenaltyCheck"]
+    recoveryAgentAmount = str(data.get("recoveryAgentAmount",0))    
+    remainingPayment =round(float(data["remainingPayment"]),2)    
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
     amount_due = float(data["amountDue"])
@@ -860,24 +865,13 @@ def update_repayment():
                 "recoveryAgent": recovery_agent,
                 "totalAmountDue": str(total_amount_due),
                 "penalty" : penalty,
-                "totalPenalty":totalPenalty,
                 "recoveryAgentAmount":recoveryAgentAmount,
-                "customPenalty": customPenalty,
                 "remainingPayment":remainingPayment,
-                "customPenaltyCheck":customPenaltyCheck
-
             }}
         )
         hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
 
-        if customPenaltyCheck  and recovery_agent:
-            if float(totalPenalty)<(float(customPenalty)+float(recoveryAgentAmount)):
-                next_month_penalty =500
-                #print(next_month_penalty)
-                update_next_month_penalty(next_month_penalty,hpNumber["hpNumber"],loan_id,installment_number)
-                #print("db updated")
-
-        
+                
         amount_to_update = (
                 new_amount_paid
                 if status != "partially_paid"
@@ -911,7 +905,15 @@ def update_repayment():
                 "$sum": {
                      "$toDouble": { "$ifNull": ["$amountPaid", 0] }
                 }
-            }
+            },
+            "totalPenaltySum": {
+                        "$sum": {
+                            "$add": [
+                                { "$toDouble": { "$ifNull": ["$penalty", 0] } },
+                                { "$toDouble": { "$ifNull": ["$recoveryAgentAmount", 0] } }
+                            ]
+           }
+          }
         }
     }
 ])
@@ -923,7 +925,8 @@ def update_repayment():
         update_result = db.loans.update_one(
             {"loanId": loan_id},
             {"$set": {"totalPayable": str(total_payable),"totalPaid":str(total_paid),
-                      "totalAmountDue":str(total_amount_due)}}
+                      "totalAmountDue":str(total_amount_due),
+                      "totalPenalty":str(round(data["totalPenaltySum"],2))}}
         )
         if result.matched_count == 0:
             return jsonify({
