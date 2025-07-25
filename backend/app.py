@@ -118,7 +118,6 @@ def create_repayment_schedule(loan_id, customer_id, months, emi):
                 "paymentMode": None,
                 "penalty": 0,
                 "recoveryAgentAmount":0,
-                "customPenalty":0,
                 "totalAmountDue": str(emi),
                 "interestAmount": str(monthly_interest),
                 "updatedOn": None,
