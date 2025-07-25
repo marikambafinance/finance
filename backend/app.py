@@ -450,7 +450,8 @@ def insert_loan_data(loan_data):
         loan_data["penaltyPaid"]="0"
         loan_data["penaltyBalance"]=loan_data["totalPenalty"]
         loan_data["initialTotalPay"]=loan_data["totalPayable"]
-        loan_amount = loan_data.get("loanAmount", 0)
+        loan_data["totalPayWithPenalty"]= float(loan_data["totalPenalty"]) + float(loan_data["totalPayable"])
+        loan_amount = float(loan_data.get("loanAmount", 0))
         interest_rate = float(loan_data.get("interestRate", 0))  # percentage
         # Calculate flat monthly interest
         monthly_interest = round(((loan_amount)*(interest_rate/100)),2)
@@ -1471,7 +1472,7 @@ def pay_penalty():
     db.loans.update_one(
             { "loanId": loan_id },
             {
-                "$inc": { "penaltyPaid": paid_penalty },
+                "$inc": { "penaltyPaid": paid_penalty},
                 "$set": { "penaltyBalance": penaltyBalance }
             }
         )
