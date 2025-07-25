@@ -1460,14 +1460,16 @@ def foreclose_balance():
     
 @app.route("/pay_penalty",methods=["POST","OPTIONS"])
 def pay_penalty():
-    required_fields = ["penaltyDuePaid", "loanId", "penaltyBalance", "hpNumber", "paymentMode"]
+    required_fields = ["penaltyDuePaid", "loanId", "penaltyBalance", "hpNumber", "paymentMode","penaltyPaid"]
     data = request.get_json(force=True)
     # Check for missing fields
     missing = [field for field in required_fields if field not in data]
     if missing:
         return jsonify({"status":"error", "message":f"Missing required fields: {', '.join(missing)}"}), 400
     data = request.get_json(force=True)
-    paid_penalty = round(float(data["penaltyDuePaid"]),2)
+    paid_due_paid= round(float(data["penaltyDuePaid"]),2)
+    penalty_paid = round(float(data["penaltyPaid"]),2)
+    paid_penalty = paid_due_paid + penalty_paid
     loan_id = data["loanId"]
     penaltyBalance = round(float(data["penaltyBalance"]),2)
     penaltyBalance -= paid_penalty
@@ -1479,8 +1481,8 @@ def pay_penalty():
         db.loans.update_one(
                 { "loanId": loan_id },
                 {
-                    "$inc": { "penaltyPaid": paid_penalty},
-                    "$set": { "penaltyBalance": penaltyBalance }
+                    "$set": { "penaltyPaid": paid_penalty,
+                     "penaltyBalance": penaltyBalance }
                 }
             )
         db.ledger.insert_one({
