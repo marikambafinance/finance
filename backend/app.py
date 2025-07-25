@@ -448,7 +448,7 @@ def insert_loan_data(loan_data):
         loan_data["totalPenalty"]="0"
         loan_data["penaltyPaid"]="0"
         loan_data["penaltyBalance"]=loan_data["totalPenalty"]
-        loan_data["initialTotalPay"]=loan_data["totalPayable"]
+        #loan_data["initialTotalPay"]=loan_data["totalPayable"]
         loan_data["totalPayWithPenalty"]= float(loan_data["totalPenalty"]) + float(loan_data["totalPayable"])
         loan_amount = float(loan_data.get("loanAmount", 0))
         interest_rate = float(loan_data.get("interestRate", 0))  # percentage
@@ -1460,22 +1460,40 @@ def foreclose_balance():
     
 @app.route("/pay_penalty",methods=["POST","OPTIONS"])
 def pay_penalty():
+    required_fields = ["penaltyDuePaid", "loanId", "penaltyBalance", "hpNumber", "paymentMode"]
     data = request.get_json(force=True)
-    paid_penalty = round(float(data["penaltyPaid"],2))
+    # Check for missing fields
+    missing = [field for field in required_fields if field not in data]
+    if missing:
+        return jsonify({"status":"error", "message":f"Missing required fields: {', '.join(missing)}"}), 400
+    data = request.get_json(force=True)
+    paid_penalty = round(float(data["penaltyDuePaid"],2))
     loan_id = data["loanId"]
     penaltyBalance = round(float(data["penaltyBalance"]),2)
     penaltyBalance -= paid_penalty
+    hpNumber = data["hpNumber"]
+    paymentMode = data["paymentMode"]
     if penaltyBalance  < 0:
         return jsonify({"status":"error","message":"Penalty already paid"}),400
+    try:
+        db.loans.update_one(
+                { "loanId": loan_id },
+                {
+                    "$inc": { "penaltyPaid": paid_penalty},
+                    "$set": { "penaltyBalance": penaltyBalance }
+                }
+            )
+        db.ledger.insert_one({
+            "hpNumber": hpNumber,"loanId" : loan_id,"paymentId": generate_unique_payment_id(),
+            "paymentMode": paymentMode,
+            "paymentDate": datetime.now(),
+            "createdOn": datetime.now(),
+            "amountPaid":paid_penalty,
+        })
+        return jsonify({"status":"success","message":"Penalty updated !"}),200
+    except Exception as e:
+        return jsonify({"status":"error","message":f"{str(e)}"}),400
     
-    db.loans.update_one(
-            { "loanId": loan_id },
-            {
-                "$inc": { "penaltyPaid": paid_penalty},
-                "$set": { "penaltyBalance": penaltyBalance }
-            }
-        )
-    return jsonify({"status":"success","message":"Penalty updated !"}),200
 
 
 @app.route("/")
