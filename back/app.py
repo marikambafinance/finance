@@ -139,6 +139,7 @@ def update_total_penalties():
             total_penalty = float(doc["totalPenaltySum"])
             penalty_balance = total_penalty - penalty_paid
             PayWithPenalty = float(loan["totalPayWithPenalty"]) + total_penalty
+            print(total_penalty,penalty_balance,PayWithPenalty)
             bulk_updates.append(
                 UpdateOne(
                     { "loanId": doc["_id"], "status": "active" },
@@ -154,15 +155,9 @@ def update_total_penalties():
 
     if bulk_updates:
         result = db.loans.bulk_write(bulk_updates)
-        return jsonify({
-            "status": "success",
-            "message": f"Updated {result.modified_count} active loan documents."
-        }), 200
+        print("success")
     else:
-        return jsonify({
-            "status": "error",
-            "message": "No penalties found to update."
-        }), 400
+        print("failed")
 
     
 
