@@ -138,7 +138,7 @@ def update_total_penalties():
             penalty_paid = float(loan.get("penaltyPaid", 0))
             total_penalty = float(doc["totalPenaltySum"])
             penalty_balance = total_penalty - penalty_paid
-            totalPayWithPenalty = float(loan["totalPayWithPenalty"]) + total_penalty
+            PayWithPenalty = float(loan["totalPayWithPenalty"]) + total_penalty
             bulk_updates.append(
                 UpdateOne(
                     { "loanId": doc["_id"], "status": "active" },
@@ -146,7 +146,7 @@ def update_total_penalties():
                         "$set": {
                             "totalPenalty": total_penalty,
                             "penaltyBalance": penalty_balance,
-                            "totalPayWithPenalty" :totalPayWithPenalty
+                            "totalPayWithPenalty" :PayWithPenalty
                         }
                     }
                 )
