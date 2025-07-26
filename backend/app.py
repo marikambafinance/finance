@@ -1356,12 +1356,12 @@ def foreclose():
                 {
                     "$set": {
                         "status": "foreclosed",
-                        "totalPayable": total_payable,
+                        "totalPayable": str(total_payable),
                         "totalAmountDue": "0",
                         "updatedOn": datetime.now(),
                         "totalPaid":float(total_payable),
-                        "foreCloseNetInterest":fore_close_net_Interest,
-                        "totalPayWithPenalty":total_Pay_With_Penalty
+                        "foreCloseNetInterest": str(fore_close_net_Interest),
+                        "totalPayWithPenalty": str(total_Pay_With_Penalty)
                     }
                 }
             )
