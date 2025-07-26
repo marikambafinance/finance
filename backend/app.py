@@ -1330,7 +1330,7 @@ def foreclose():
     data = request.get_json(force=True)
     if "pendingBalance" in data.keys():
         keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","totalPayable","hpNumber","pendingBalance","paymentMode"]
-        missing =[key for key in data.keys() if key  not in keys]
+        missing = [key for key in keys if key not in data]
         if missing:
             return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
         
@@ -1343,7 +1343,7 @@ def foreclose():
     
     else:
         keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","hpNumber","customBalance","paymentMode"]
-        missing =[key for key in data.keys() if key  not in keys]
+        missing = [key for key in keys if key not in data]
         if missing:
             return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
         
