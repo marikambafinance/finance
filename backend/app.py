@@ -1335,22 +1335,19 @@ def foreclose():
         return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
     
     loan_id =data["loanId"]
-    loan = db.loans.find_one({"loanId":loan_id},{"status":1,"totalPaid":1})
+    loan = db.loans.find_one({"loanId":loan_id})
     status = loan["status"]
     pending_balance = float(data["customBalance"])
-    totalPaid = float(loan.get("totalPaid",0))
-    totalPayable = totalPaid + pending_balance
-        
-       
-        
-
-        
+    total_paid = float(loan.get("totalPaid",0))
+    total_payable = total_paid + pending_balance
+            
     
-    foreCloseNetInterest = data["foreCloseNetInterest"]
+    fore_close_net_Interest = data["foreCloseNetInterest"]
     recent_installment = data["recentInstallment"]
     tenure = data["tenure"]
-    hpNumber = data["hpNumber"]
-    paymentMode = data["paymentMode"]
+    customer_id = data["hpNumber"]
+    payment_mode = data["paymentMode"]
+    total_Pay_With_Penalty = total_payable+ float(loan["totalPenalty"])
 
     if (status != "closed" and status != "foreclosed") and (recent_installment != tenure):
         try:
@@ -1359,20 +1356,21 @@ def foreclose():
                 {
                     "$set": {
                         "status": "foreclosed",
-                        "totalPayable": totalPayable,
+                        "totalPayable": total_payable,
                         "totalAmountDue": "0",
                         "updatedOn": datetime.now(),
-                        "totalPaid":float(totalPaid),
-                        "foreCloseNetInterest":foreCloseNetInterest
+                        "totalPaid":float(total_payable),
+                        "foreCloseNetInterest":fore_close_net_Interest,
+                        "totalPayWithPenalty":total_Pay_With_Penalty
                     }
                 }
             )
 
             update_ledger = db.ledger.insert_one({
-                "hpNumber": hpNumber,
+                "hpNumber": customer_id,
                 "loanId": loan_id,
                 "paymentId": generate_unique_payment_id(),
-                "paymentMode": paymentMode,  # <-- Make sure this is a date, not a variable misused
+                "paymentMode": payment_mode,  # <-- Make sure this is a date, not a variable misused
                 "createdOn": datetime.now(),
                 "paymentDate": datetime.now(),
                 "amountPaid": round(pending_balance, 2)
