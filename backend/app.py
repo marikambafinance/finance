@@ -1432,13 +1432,16 @@ def foreclose_balance():
             foreCloseNetInterest = round((monthly_interest*3),2)
             totalPayable = float(loan_amount) + foreCloseNetInterest
             pending_balance = float(totalPayable)-float(paid_till_date)
-            return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2),"totalPayable":totalPayable,"pendingBalance":pending_balance,"recentInstallment":recent_installment,"tenure":tenure})
+            return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2),"totalPayable":totalPayable,
+                            "foreCloseNetInterest":foreCloseNetInterest,
+                            "pendingBalance":pending_balance,"recentInstallment":recent_installment,"tenure":tenure})
         else:
             foreCloseNetInterest = round((monthly_interest*(tenure-recent_installment)),2)
             totalPayable = float(loan_amount) + foreCloseNetInterest
             pending_balance = float(totalPayable)-float(paid_till_date)
-            return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2),"totalPayable":totalPayable,"pendingBalance":pending_balance,"recentInstallment":recent_installment,"tenure":tenure})
-
+            return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2),"totalPayable":totalPayable,
+                            "foreCloseNetInterest":foreCloseNetInterest,
+                            "pendingBalance":pending_balance,"recentInstallment":recent_installment,"tenure":tenure})
             
         
     except Exception as e:
