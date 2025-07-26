@@ -1326,54 +1326,44 @@ def auto_update():
 @app.route("/foreclose", methods=['POST',"OPTIONS"])
 def foreclose():
     data = request.get_json(force=True)
-    loan_id =data["loanId"]
-    paymentMode =  data["paymentMode"]
-    loan =  db.loans.find_one({"loanId":loan_id})
-    status  = loan["status"]
-    loan_amount = loan["loanAmount"]
-    hpNumber =  loan["hpNumber"]
-    paid_till_date =loan.get("totalPaid",0)
-    monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
+    if "pendingBalance" in data.keys():
+        keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","totalPayable","hpNumber","pendingBalance","paymentMode"]
+        missing =[key for key in data.keys() if key  not in keys]
+        if missing:
+            return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
+        
+        totalPayable = data["totalPayable"]
+        totalPaid = totalPayable        
+        pending_balance = data["pendingBalance"]
+        loan_id =data["loanId"]
+        loan = db.loans.find_one({"loanId":loan_id},{"status":1,"totalPaid":1})
+        status = loan["status"]
+    
+    else:
+        keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","hpNumber","customBalance","paymentMode"]
+        missing =[key for key in data.keys() if key  not in keys]
+        if missing:
+            return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
+        
+        loan_id =data["loanId"]
+        loan = db.loans.find_one({"loanId":loan_id},{"status":1,"totalPaid":1})
+        status = loan["status"]
+        pending_balance = float(data["customBalance"])
+        totalPaid = float(loan.get("totalPaid",0))
+        totalPayable = totalPaid + pending_balance
+        
+       
+        
 
-    recent_install = db.repayments.find_one(
-                                    {
-                                            "hpNumber": hpNumber,
-                                            "loanId": loan_id,
-                                            "status": { "$in": ["paid", "partial"] }
-                                                        
-                                        },
-                                    {"installmentNumber": 1, "_id": 0},
-                                    sort=[("installmentNumber", -1)]
-                                )
-    recent_installment = recent_install["installmentNumber"] if recent_install else 0
-    total_penalty_cursor = db.repayments.aggregate([
-            {
-                "$match": {
-                    "hpNumber": hpNumber,
-                    "loanId": loan_id
-                }
-            },
-            {
-                "$group": {
-                    "_id": None,
-                    "total_Penalty": {
-                        "$sum": {
-                            "$toDouble": "$totalPenalty"
-                        }
-                    }
-                }
-            }
-        ])
+        
+    
+    foreCloseNetInterest = data["foreCloseNetInterest"]
+    recent_installment = data["recentInstallment"]
+    tenure = data["tenure"]
+    hpNumber = data["hpNumber"]
+    paymentMode = data["paymentMode"]
 
-# Extract the result
-    total_penalty_data = next(total_penalty_cursor, {})
-    total_penalty = total_penalty_data.get("total_Penalty", 0)
-    foreCloseNetInterest = round((float(recent_installment+1)*monthly_interest),2)
-    totalPayable = float(loan_amount) + foreCloseNetInterest + float(total_penalty)
-    pending_balance = float(totalPayable)-float(paid_till_date)
-    totalPaid = totalPayable
-
-    if (status != "closed" and status != "foreclosed") and (recent_installment != loan["loanTerm"]):
+    if (status != "closed" and status != "foreclosed") and (recent_installment != tenure):
         try:
             update = db.loans.update_one(
                 {"loanId": loan_id},
@@ -1417,8 +1407,11 @@ def foreclose_balance():
         loan =  db.loans.find_one({"loanId":loan_id})
         loan_amount = loan["loanAmount"]
         hpNumber =  loan["hpNumber"]
+        tenure= float(loan["loanTerm"])
         paid_till_date =loan.get("totalPaid",0)
-        monthly_interest =  round(float(loan["interestAmount"])/float(loan["loanTerm"]),2)
+        monthly_interest =  round((float(loan["interestAmount"])/tenure),2)
+
+
 
         recent_install = db.repayments.find_one(
                                         {
@@ -1430,33 +1423,22 @@ def foreclose_balance():
                                         {"installmentNumber": 1, "_id": 0},
                                         sort=[("installmentNumber", -1)]
                                     )
-        recent_installment = recent_install["installmentNumber"] if recent_install else 0
-        total_penalty_cursor = db.repayments.aggregate([
-                {
-                    "$match": {
-                        "hpNumber": hpNumber,
-                        "loanId": loan_id
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": None,
-                        "total_Penalty": {
-                            "$sum": {
-                                "$toDouble": "$totalPenalty"
-                            }
-                        }
-                    }
-                }
-            ])
+        recent_installment = recent_install["installmentNumber"] if recent_install else 1
 
-    # Extract the result
-        total_penalty_data = next(total_penalty_cursor, {})
-        total_penalty = total_penalty_data.get("total_Penalty", 0)
-        foreCloseNetInterest = round((float(recent_installment+1)*monthly_interest),2)
-        totalPayable = float(loan_amount) + foreCloseNetInterest + float(total_penalty)
-        pending_balance = float(totalPayable)-float(paid_till_date)
-        return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2)})
+    # Extract the result 
+        if (recent_installment < 3 and (tenure-recent_installment) >=3) :
+            foreCloseNetInterest = round((monthly_interest*3),2)
+            totalPayable = float(loan_amount) + foreCloseNetInterest
+            pending_balance = float(totalPayable)-float(paid_till_date)
+            return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2),"totalPayable":totalPayable,"pendingBalance":pending_balance,"recentInstallment":recent_installment,"tenure":tenure})
+        else:
+            foreCloseNetInterest = round((monthly_interest*(tenure-recent_installment)),2)
+            totalPayable = float(loan_amount) + foreCloseNetInterest
+            pending_balance = float(totalPayable)-float(paid_till_date)
+            return jsonify({"status":"success","pendingBalance":round(float(pending_balance),2),"totalPayable":totalPayable,"pendingBalance":pending_balance,"recentInstallment":recent_installment,"tenure":tenure})
+
+            
+        
     except Exception as e:
         return jsonify({"status":"error","message":str(e)})
     
