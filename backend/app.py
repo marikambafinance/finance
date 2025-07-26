@@ -808,8 +808,7 @@ def update_repayment():
     data = request.get_json(force=True)
     required_keys = {
         "amountPaid", "status", "paymentMode", "recoveryAgent",
-        "totalAmountDue", "loanId", "installmentNumber","penalty","recoveryAgentAmount","remainingPayment","penaltyPaid"
-        
+        "totalAmountDue", "loanId", "installmentNumber","penalty","recoveryAgentAmount","remainingPayment"
     }
 
     missing_keys = required_keys - data.keys()
@@ -833,7 +832,7 @@ def update_repayment():
     payment_id = generate_unique_payment_id()
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
     amount_due = float(data["amountDue"])
-    penalty_paid = float(data["penaltyPaid"])
+    #penalty_paid = float(data["penaltyPaid"])
 
     
     if status !="partial":
@@ -907,14 +906,16 @@ def update_repayment():
                      "$toDouble": { "$ifNull": ["$amountPaid", 0] }
                 }
             },
-            "totalPenaltySum": {
-                        "$sum": {
-                            "$add": [
-                                { "$toDouble": { "$ifNull": ["$penalty", 0] } },
-                                { "$toDouble": { "$ifNull": ["$recoveryAgentAmount", 0] } }
-                            ]
-           }
-          }
+            
+        #    "totalPenaltySum": {
+        #                "$sum": {
+        #                    "$add": [
+        #                        { "$toDouble": { "$ifNull": ["$penalty", 0] } },
+        #                        { "$toDouble": { "$ifNull": ["$recoveryAgentAmount", 0] } }
+        #                    ]
+        #   } 
+        #  }
+          
         }
     }
 ])
@@ -927,8 +928,9 @@ def update_repayment():
             {"loanId": loan_id},
             {"$set": {"totalPayable": str(total_payable),"totalPaid":str(total_paid),
                       "totalAmountDue":str(total_amount_due),
-                      "totalPenalty":str(round(data["totalPenaltySum"],2)),
-                      "penaltyBalance":str(round(float(data["totalPenaltySum"])-penalty_paid),2)}}
+                      #"totalPenalty":str(round(data["totalPenaltySum"],2)),
+                      #"penaltyBalance":str(round(float(data["totalPenaltySum"])-penalty_paid),2)
+                      }}
         )
         if result.matched_count == 0:
             return jsonify({
