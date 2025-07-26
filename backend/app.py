@@ -1328,31 +1328,18 @@ def auto_update():
 @app.route("/foreclose", methods=['POST',"OPTIONS"])
 def foreclose():
     data = request.get_json(force=True)
-    if "pendingBalance" in data.keys():
-        keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","totalPayable","hpNumber","pendingBalance","paymentMode"]
-        missing = [key for key in keys if key not in data]
-        if missing:
-            return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
-        
-        totalPayable = data["totalPayable"]
-        totalPaid = totalPayable        
-        pending_balance = data["pendingBalance"]
-        loan_id =data["loanId"]
-        loan = db.loans.find_one({"loanId":loan_id},{"status":1,"totalPaid":1})
-        status = loan["status"]
     
-    else:
-        keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","hpNumber","customBalance","paymentMode"]
-        missing = [key for key in keys if key not in data]
-        if missing:
-            return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
-        
-        loan_id =data["loanId"]
-        loan = db.loans.find_one({"loanId":loan_id},{"status":1,"totalPaid":1})
-        status = loan["status"]
-        pending_balance = float(data["customBalance"])
-        totalPaid = float(loan.get("totalPaid",0))
-        totalPayable = totalPaid + pending_balance
+    keys = ["loanId","foreCloseNetInterest","recentInstallment","tenure","hpNumber","customBalance","paymentMode"]
+    missing = [key for key in keys if key not in data]
+    if missing:
+        return jsonify({"status":"error","message":f"Missing required keys {missing}"}),400
+    
+    loan_id =data["loanId"]
+    loan = db.loans.find_one({"loanId":loan_id},{"status":1,"totalPaid":1})
+    status = loan["status"]
+    pending_balance = float(data["customBalance"])
+    totalPaid = float(loan.get("totalPaid",0))
+    totalPayable = totalPaid + pending_balance
         
        
         
