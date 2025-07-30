@@ -10,6 +10,7 @@ const RepaymentCard = ({
   onUpdateSuccess,
   updateLoans,
   hpNumber,
+  penaltyPaid
 }) => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -55,36 +56,36 @@ const RepaymentCard = ({
   const customPenalty = Number(watch("customPenalty"));
   const customPenaltyCheck = watch("customPenaltyCheck");
 
-  useEffect(() => {
-    if (!editMode) return;
-    const amountDue = parseFloat(watch("amountDue")) || 0;
-    const newTotalAmountDue = amountDue + totalPenalty;
-    setValue("totalAmountDue", newTotalAmountDue);
-    setValue("remainingPayment", newTotalAmountDue - paidAmount);
-    if (watch("status") === "paid") {
-      setValue("amountPaid", newTotalAmountDue);
-    }
-  }, [totalPenalty, watch("amountDue"), watch("status")]);
+  // useEffect(() => {
+  //   if (!editMode) return;
+  //   const amountDue = parseFloat(watch("amountDue")) || 0;
+  //   const newTotalAmountDue = amountDue + totalPenalty;
+  //   setValue("totalAmountDue", newTotalAmountDue);
+  //   setValue("remainingPayment", newTotalAmountDue - paidAmount);
+  //   if (watch("status") === "paid") {
+  //     setValue("amountPaid", newTotalAmountDue);
+  //   }
+  // }, [totalPenalty, watch("amountDue"), watch("status")]);
 
-  useEffect(() => {
-    if (customPenaltyCheck) {
-      setValue("totalPenalty", customPenalty);
-    } else {
-      setValue("customPenalty", 0);
-      const recoveryFee = recoveryAgent ? 500 : 0;
-      const newTotalPenalty = penalty + recoveryFee;
-      setValue("totalPenalty", newTotalPenalty);
-    }
-  }, [customPenalty, recoveryAgent, customPenaltyCheck]);
+  // useEffect(() => {
+  //   if (customPenaltyCheck) {
+  //     setValue("totalPenalty", customPenalty);
+  //   } else {
+  //     setValue("customPenalty", 0);
+  //     const recoveryFee = recoveryAgent ? 500 : 0;
+  //     const newTotalPenalty = penalty + recoveryFee;
+  //     setValue("totalPenalty", newTotalPenalty);
+  //   }
+  // }, [customPenalty, recoveryAgent, customPenaltyCheck]);
 
-  useEffect(() => {
-    if (!editMode) return;
-    const recoveryFee = recoveryAgentAmount;
-    const newTotalPenalty = penalty + recoveryFee;
-    recoveryAgent
-      ? setValue("totalPenalty", newTotalPenalty)
-      : setValue("totalPenalty", repayment?.totalPenalty);
-  }, [penalty, recoveryAgent, setValue]);
+  // useEffect(() => {
+  //   if (!editMode) return;
+  //   const recoveryFee = recoveryAgentAmount;
+  //   const newTotalPenalty = penalty + recoveryFee;
+  //   recoveryAgent
+  //     ? setValue("totalPenalty", newTotalPenalty)
+  //     : setValue("totalPenalty", repayment?.totalPenalty);
+  // }, [penalty, recoveryAgent, setValue]);
 
   useEffect(() => {
     reset({
@@ -107,18 +108,18 @@ const RepaymentCard = ({
     });
   }, [repayment]);
 
-  const handleCustomPenalty = () => {
-    if (editMode) {
-      const isCustomPenaltyCheck = !customPenaltyCheck;
+  // const handleCustomPenalty = () => {
+  //   if (editMode) {
+  //     const isCustomPenaltyCheck = !customPenaltyCheck;
 
-      setValue("customPenaltyCheck", isCustomPenaltyCheck);
-      if (isCustomPenaltyCheck) {
-        setValue("totalPenalty", customPenalty);
-      } else {
-        setValue("remainingPayment", totalAmountDue - paidAmount);
-      }
-    }
-  };
+  //     setValue("customPenaltyCheck", isCustomPenaltyCheck);
+  //     if (isCustomPenaltyCheck) {
+  //       setValue("totalPenalty", customPenalty);
+  //     } else {
+  //       setValue("remainingPayment", totalAmountDue - paidAmount);
+  //     }
+  //   }
+  // };
 
   const handleStatusChange = (e) => {
     const selected = e.target.value;
@@ -141,9 +142,10 @@ const RepaymentCard = ({
   }, [editMode]);
 
   const updateRepayment = async (data) => {
+    data.penaltyPaid = penaltyPaid;
     try {
       const res = await fetch(
-        "https://mariamma-finance.onrender.com/update_repayment",
+        "https://mariamma-finance-4d56.onrender.com/update_repayment",
         {
           method: "POST",
           headers: {
@@ -172,8 +174,8 @@ const RepaymentCard = ({
       setValue("remainingPayment", totalAmountDue - repayment?.amountPaid);
       // setValue("recoveryAgentAmount", isAgent ? recoveryAgentAmount + 500 : recoveryAgentAmount);
       isAgent
-        ? setValue("recoveryAgentAmount", recoveryAgentAmount + 500)
-        : setValue("recoveryAgentAmount");
+        ? setValue("recoveryAgentAmount", 500)
+        : setValue("recoveryAgentAmount", 0);
     }
   };
 
@@ -242,7 +244,6 @@ const RepaymentCard = ({
 
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Penalty</span>
-          <input type="hidden" {...register("recoveryAgentAmount")} />
           <span>₹{watch("penalty").toLocaleString("en-IN")}</span>
         </div>
 
@@ -252,7 +253,7 @@ const RepaymentCard = ({
           <span>₹{watch("recoveryAgentAmount")}</span>
         </div>
 
-        {customPenaltyCheck && (
+        {/* {customPenaltyCheck && (
           <div className="flex flex-col w-40">
             <span className="text-xs text-gray-400">Custom Penalty</span>
             {editMode ? (
@@ -291,7 +292,7 @@ const RepaymentCard = ({
           />
 
           <span>₹{totalPenalty}</span>
-        </div>
+        </div> */}
 
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Total Amount Due</span>
@@ -386,7 +387,7 @@ const RepaymentCard = ({
           <span className="text-sm">Recovery Agent</span>
         </div>
 
-        <div className="flex items-center gap-2 w-48">
+        {/* <div className="flex items-center gap-2 w-48">
           <input
             className="w-5 h-5 accent-green-500 border-green-500"
             type="checkbox"
@@ -400,7 +401,7 @@ const RepaymentCard = ({
             }}
           />
           <span className="text-sm">Custom Penalty</span>
-        </div>
+        </div> */}
 
         <div className="pt-2 w-full flex gap-4">
           <div className="pt-2 w-full flex gap-4">

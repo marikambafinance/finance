@@ -16,7 +16,7 @@ const Search = ({setLoading}) => {
       }
       setLoading(true)
       let data = { [searchKey]: search };
-      const res = await fetch("https://mariamma-finance.onrender.com/search", {
+      const res = await fetch("https://mariamma-finance-4d56.onrender.com/search", {
         method: "POST",
         headers: {
           "x-api-key": "marikambafinance@123",

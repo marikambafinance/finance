@@ -12,15 +12,19 @@ import ForeclosedNotice from "../components/ForecloseNotice";
 import useRepaymentDetails from "../hooks/useRepaymentDetails";
 import useAutoPayment from "../hooks/useAutoPayment";
 import useForeclosure from "../hooks/useForeclosure";
+import usePenalty from "../hooks/usePenalty";
+import ForeclosePopup from "../components/ForeclosePopup";
 
 const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
+  const { payPenalty } = usePenalty();
   const { loanId, hpNumber } = useParams();
   const [partialFlag, setPartialFlag] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshFlag, setRefreshFlag] = useState(0);
   const navigate = useNavigate();
   const [payMode, setPayMode] = useState("");
+  const [show, setShow] = useState(false);
 
   const { loanList } = useLoanListContext();
 
@@ -35,11 +39,36 @@ const LoanRepayments = () => {
 
   console.log(loanDetails);
 
-  const { register, handleSubmit, reset } = useForm();
+  const {
+    register: registerAutoPayment,
+    handleSubmit: handleSubmitAutoPayment,
+    reset: resetAutoPayment,
+  } = useForm();
+
+  const {
+    register: registerPenalty,
+    handleSubmit: handleSubmitPenalty,
+    reset: resetPenalty,
+    formState: { errors: penaltyErrors },
+  } = useForm();
+
+  const onPenaltySubmit = async (data) => {
+    data.loanId = loanId;
+    data.hpNumber = hpNumber;
+    data.penaltyBalance = loanDetails.penaltyBalance;
+    data.penaltyPaid = loanDetails.penaltyPaid;
+    setLoading(true);
+    await payPenalty(data);
+    await fetchLoanWithRepayments(hpNumber);
+    await fetchRepaymentDetails();
+    console.log(data);
+    resetPenalty();
+    setLoading(false);
+  };
 
   const fetchForecloseBalance = async () => {
     const res = await fetch(
-      "https://mariamma-finance.onrender.com/foreclose_balance",
+      "https://mariamma-finance-4d56.onrender.com/foreclose_balance",
       {
         method: "POST",
         headers: {
@@ -60,10 +89,11 @@ const LoanRepayments = () => {
     loanId,
     payMode,
     fetchForecloseBalance,
-    partialFlag
+    partialFlag,
+    hpNumber
   );
 
-  const onSubmit = async (data) => {
+  const onAutoPaymentSubmit = async (data) => {
     if (!data.amount) return;
     setLoading(true);
     const extendedObj = { ...data, loanId: loanId };
@@ -71,7 +101,7 @@ const LoanRepayments = () => {
     await handleAutoPayment(extendedObj);
     await fetchLoanWithRepayments(hpNumber);
     await fetchRepaymentDetails();
-    reset();
+    resetAutoPayment();
     setLoading(false);
   };
 
@@ -112,8 +142,10 @@ const LoanRepayments = () => {
     } else {
       setPartialFlag(false);
     }
+    console.log(partialFlag);
   }, [repayments, filteredRepayments]);
 
+  console.log(filteredRepayments);
   const fullName =
     loanList?.customerDetails?.firstName +
     " " +
@@ -143,6 +175,9 @@ const LoanRepayments = () => {
               </button>
             </div>
 
+            {show && (
+              <ForeclosePopup show={show} close={() => setShow(false)} />
+            )}
             {/* Loan Info */}
             <div className="bg-gradient-to-r from-gray-800 to-gray-700 shadow-2xl rounded-3xl border border-gray-600 mb-10 p-8 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-white">
@@ -165,6 +200,21 @@ const LoanRepayments = () => {
                   value={`₹${parseFloat(loanDetails.loanAmount).toLocaleString(
                     "en-IN"
                   )}`}
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="Disbursed Amount"
+                  value={`₹${parseFloat(loanDetails.actualAmount).toLocaleString(
+                    "en-IN"
+                  )}`}
+                  valueClass="text-[#88b8ff]"
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="Initial Total Pay"
+                  value={`₹${parseFloat(
+                    loanDetails.initialPay
+                  ).toLocaleString("en-IN")}`}
                   valueClass="text-[#88b8ff]"
                 />
                 <InfoItem
@@ -173,7 +223,36 @@ const LoanRepayments = () => {
                   value={`₹${parseFloat(
                     loanDetails.totalPayable
                   ).toLocaleString("en-IN")}`}
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="Total Penalty"
+                  value={`₹${parseFloat(
+                    loanDetails.totalPenalty
+                  ).toLocaleString("en-IN")}`}
+                  valueClass="text-[#ff2b36]"
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="Penalty Balance"
+                  value={`₹${parseFloat(
+                    loanDetails.penaltyBalance
+                  ).toLocaleString("en-IN")}`}
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="TotalPay with Penalty"
+                  value={`₹${parseFloat(
+                    loanDetails.totalPayWithPenalty
+                  ).toLocaleString("en-IN")}`}
                   valueClass="text-yellow-500"
+                />
+                <InfoItem
+                  icon={BadgeDollarSign}
+                  label="Total Penalty paid"
+                  value={`₹${parseFloat(loanDetails.penaltyPaid).toLocaleString(
+                    "en-IN"
+                  )}`}
                 />
                 <InfoItem
                   icon={BadgeDollarSign}
@@ -196,13 +275,16 @@ const LoanRepayments = () => {
                   valueClass="text-[#ff2b36]"
                 />
                 <div className="flex justify-between col-span-full">
-                  <form className="flex gap-4 w-3xl flex-col">
+                  <form
+                    className="flex gap-4 w-3xl flex-col"
+                    onSubmit={handleSubmitAutoPayment(onAutoPaymentSubmit)}
+                  >
                     <div className="flex gap-4 items-end">
                       <div className="flex flex-col">
                         <label className="block mb-1">Payment Mode : </label>
                         <div>
                           <select
-                            {...register("paymentMode")}
+                            {...registerAutoPayment("paymentMode")}
                             className="w-full p-2 rounded bg-gray-700 text-white"
                           >
                             <option>Card</option>
@@ -215,17 +297,53 @@ const LoanRepayments = () => {
                       <div className="flex flex-col">
                         <label className="block mb-1">Amount : </label>
                         <input
-                          {...register("amount")}
+                          {...registerAutoPayment("amount")}
                           type="number"
                           className="p-2 rounded bg-gray-700 text-white"
                         />
                       </div>
                       <button
                         type="submit"
-                        onClick={handleSubmit(onSubmit)}
                         className="bg-teal-400 w-fit px-6 hover:bg-teal-500 cursor-pointer text-gray-900 font-semibold text-lg py-2 rounded-full shadow-xl transition duration-300"
                       >
                         Auto Payment
+                      </button>
+                    </div>
+                  </form>
+                </div>
+                <div className="flex justify-between col-span-full">
+                  <form
+                    className="flex gap-4 w-3xl flex-col"
+                    onSubmit={handleSubmitPenalty(onPenaltySubmit)}
+                  >
+                    <div className="flex gap-4 items-end">
+                      <div className="flex flex-col">
+                        <label className="block mb-1">Payment Mode : </label>
+                        <div>
+                          <select
+                            {...registerPenalty("paymentMode")}
+                            className="w-full p-2 rounded bg-gray-700 text-white"
+                          >
+                            <option>Card</option>
+                            <option>UPI</option>
+                            <option>Cash</option>
+                            <option>Netbanking</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="block mb-1">Amount : </label>
+                        <input
+                          {...registerPenalty("penaltyDuePaid")}
+                          type="number"
+                          className="p-2 rounded bg-gray-700 text-white"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="bg-teal-400 w-fit px-6 hover:bg-teal-500 cursor-pointer text-gray-900 font-semibold text-lg py-2 rounded-full shadow-xl transition duration-300"
+                      >
+                        Pay Penalty
                       </button>
                     </div>
                   </form>
@@ -267,6 +385,7 @@ const LoanRepayments = () => {
                   onUpdateSuccess={fetchRepaymentDetails}
                   updateLoans={fetchLoanWithRepayments}
                   hpNumber={hpNumber}
+                  penaltyPaid={loanDetails?.penaltyPaid}
                 />
               ))}
               {loanDetails?.status === "foreclosed" ? <ForeclosedNotice /> : ""}

@@ -48,35 +48,35 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 w-[100%]">
           <StatCard
             label="Amount Issued"
-            value={`₹${totals.amountIssued.toLocaleString("en-IN")}`}
+            value={`₹${totals?.amountIssued.toLocaleString("en-IN") || 0}`}
+          />
+          <StatCard
+            label="Amount Disbursed"
+            value={`₹${totals?.actualAmountIssued.toLocaleString("en-IN") || 0}`}
           />
           <StatCard
             label="Amount Received"
-            value={`₹${totals.amountReceived.toLocaleString("en-IN")}`}
+            value={`₹${totals?.amountReceived.toLocaleString("en-IN") || 0}`}
           />
           <StatCard
             label="Interest Amount Collected"
-            value={`₹${totals.interestCollected?.toLocaleString("en-IN")}`}
+            value={`₹${totals?.interestCollected?.toLocaleString("en-IN") || 0}`}
           />
-          <StatCard label="Total Loans" value={totals.loans} />
-          <StatCard label="Closed Loans" value={totals.closedLoans} />
-          <StatCard label="Penalty Collected" value={totals.penaltyAmount} />
-          <StatCard
-            label="Recovery Agent Fees"
-            value={`${totals.recoveryAgentAmount}`}
-          />
+          <StatCard label="Total Loans" value={totals?.loans || 0} />
+          <StatCard label="Closed Loans" value={totals?.closedLoans || 0} />
+          <StatCard label="Penalty Collected" value={totals?.penaltyAmount || 0} />
           <StatCard
             onClick={() => setShow(true)}
             label="Total Customers"
-            value={`${totals.customers}`}
+            value={`${totals?.customers || 0}`}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 w-full">
-          <DonutChart rate={averages.repaymentRatePercent} />
+          <DonutChart rate={averages?.repaymentRatePercent} />
           <CustomBarChart
-            customers={breakdown.customersWithActiveLoans}
-            loans={totals.activeLoans}
+            customers={breakdown?.customersWithActiveLoans}
+            loans={totals?.activeLoans}
           />
           <div className="bg-gray-800 rounded-2xl shadow p-4">
             <h3 className="font-semibold text-gray-200 mb-2">
@@ -84,17 +84,17 @@ const Dashboard = () => {
             </h3>
             <p>
               New Customers This Month:{" "}
-              <strong>{recent.newCustomersThisMonth}</strong>
+              <strong>{recent?.newCustomersThisMonth}</strong>
             </p>
             <p>
               Repayments This Month:{" "}
-              <strong>{recent.repaymentsThisMonth}</strong>
+              <strong>{recent?.repaymentsThisMonth}</strong>
             </p>
             <p>
-              Repeat Customers: <strong>{breakdown.repeatCustomers}</strong>
+              Repeat Customers: <strong>{breakdown?.repeatCustomers}</strong>
             </p>
             <p>
-              Defaulters: <strong>{defaulters.count}</strong>
+              Defaulters: <strong>{defaulters?.count}</strong>
             </p>
           </div>
         </div>
@@ -103,7 +103,7 @@ const Dashboard = () => {
           Defaulters
         </h3>
 
-        {defaulters.loans.map((loan, index) => (
+        {defaulters?.loans.map((loan, index) => (
           <DefaultersLoanCard key={index} loan={loan} />
         ))}
       </div>

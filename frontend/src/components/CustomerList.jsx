@@ -22,7 +22,7 @@ const CustomerList = () => {
     if(!customers?.next_id) return;
     navigate(`?next_id=${customers?.next_id}`)
     console.log(customers?.next_id)
-    const res = await fetch(`https://mariamma-finance.onrender.com/customers?next_id=${customers?.next_id}`,{
+    const res = await fetch(`https://mariamma-finance-4d56.onrender.com/customers?next_id=${customers?.next_id}`,{
         headers: {
           "x-api-key": "marikambafinance@123",
         },
@@ -37,7 +37,7 @@ const CustomerList = () => {
     if(!customers?.prev_id) return;
     navigate(`?prev_id=${customers?.prev_id}`)
     console.log(customers?.prev_id)
-    const res = await fetch(`https://mariamma-finance.onrender.com/customers?prev_id=${customers?.prev_id}`,{
+    const res = await fetch(`https://mariamma-finance-4d56.onrender.com/customers?prev_id=${customers?.prev_id}`,{
         headers: {
           "x-api-key": "marikambafinance@123",
         },

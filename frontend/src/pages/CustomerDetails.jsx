@@ -116,10 +116,10 @@ const CustomerDetails = () => {
       value: watch("email"),
     },
     {
-      name: "chasisNumber",
-      label: "Chasis Number",
+      name: "chassisNumber",
+      label: "Chassis Number",
       icon: <Bike />,
-      value: watch("chasisNumber"),
+      value: watch("chassisNumber"),
     },
     {
       name: "phone",

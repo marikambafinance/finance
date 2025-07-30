@@ -31,6 +31,17 @@ const CreateLoanPage = () => {
   const loanAmount = parseFloat(watch("loanAmount"));
   const interestRate = parseFloat(watch("interestRate"));
   const loanTerm = parseFloat(watch("loanTerm"));
+  const totalPayable = parseFloat(watch("totalPayable"));
+  const agreement = watch("agreement");
+  const hpEntry = watch("hpEntry");
+  const hpCancellation = watch("hpCancellation");
+  const insurance = watch("insurance");
+  const agentCommision = watch("agentCommision");
+  const officeRent = watch("officeRent");
+  const officeManagementSalary = watch("officeManagementSalary");
+  const officeOtherExpense = watch("officeOtherExpense");
+  const officeBankAuditchanges = watch("officeBankAuditChanges");
+  const disbursedAmount = watch("actualAmount");
 
   useEffect(() => {
     if (!loanAmount || !interestRate || !loanTerm) {
@@ -40,8 +51,7 @@ const CreateLoanPage = () => {
       return;
     }
 
-    const interestAmount = ((loanAmount * loanTerm * interestRate))/100;
-      
+    const interestAmount = (loanAmount * loanTerm * interestRate) / 100;
     const totalPayable = loanAmount + interestAmount;
     const monthlyEMI = totalPayable / loanTerm;
 
@@ -51,17 +61,22 @@ const CreateLoanPage = () => {
   }, [loanAmount, interestRate, watch("loanTerm"), setValue]);
 
   const onSubmit = async (data) => {
+    data.initialPay = totalPayable;
     setLoading(true);
+    console.log(data);
 
     try {
-      const res = await fetch("https://mariamma-finance.onrender.com/loan", {
-        method: "POST",
-        headers: {
-          "x-api-key": "marikambafinance@123",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const res = await fetch(
+        "https://mariamma-finance-4d56.onrender.com/loan",
+        {
+          method: "POST",
+          headers: {
+            "x-api-key": "marikambafinance@123",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
 
       const result = await res.json();
 
@@ -82,6 +97,38 @@ const CreateLoanPage = () => {
       setShowPopup(true);
     }
   };
+
+  useEffect(() => {
+    if (!totalPayable) return;
+
+    const finalAmount = (
+      parseFloat(loanAmount) -
+      (parseFloat(agreement || 0) +
+        parseFloat(hpEntry || 0) +
+        parseFloat(hpCancellation || 0) +
+        parseFloat(insurance || 0) +
+        parseFloat(agentCommision || 0) +
+        parseFloat(officeRent || 0) +
+        parseFloat(officeManagementSalary || 0) +
+        parseFloat(officeOtherExpense || 0) +
+        parseFloat(officeBankAuditchanges || 0))
+    ).toFixed(2);
+
+    setValue("actualAmount", finalAmount);
+  }, [
+    totalPayable,
+    loanAmount,
+    agreement,
+    hpEntry,
+    hpCancellation,
+    insurance,
+    agentCommision,
+    officeRent,
+    officeManagementSalary,
+    officeOtherExpense,
+    officeBankAuditchanges,
+    setValue,
+  ]);
 
   if (loading) return <Loader />;
 
@@ -185,22 +232,17 @@ const CreateLoanPage = () => {
           </div>
 
           <div>
-            <label className="block mb-1">Total Payable</label>
-            <input
-              type="text"
-              readOnly
-              value={watch("totalPayable") ? `₹${parseFloat(watch("totalPayable")).toLocaleString("en-IN")}` : ""}
-              placeholder="Total Payable"
-              className="p-2 rounded bg-gray-700 w-full"
-            />
-          </div>
-
-          <div>
             <label className="block mb-1">Monthly EMI</label>
             <input
               type="text"
               readOnly
-              value={watch("monthlyEMI") ? `₹${parseFloat(watch("monthlyEMI")).toLocaleString("en-IN")}` : ""}
+              value={
+                watch("monthlyEMI")
+                  ? `₹${parseFloat(watch("monthlyEMI")).toLocaleString(
+                      "en-IN"
+                    )}`
+                  : ""
+              }
               placeholder="Monthly EMI"
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -218,6 +260,123 @@ const CreateLoanPage = () => {
                 {errors.purpose.message}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block mb-1">Agreement</label>
+            <input
+              placeholder="Agreement"
+              type="number"
+              {...register("agreement")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">HP Entry</label>
+            <input
+              placeholder="HP Entry"
+              type="number"
+              {...register("hpEntry")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">HP Cancellation</label>
+            <input
+              placeholder="HP Cancellation"
+              type="number"
+              {...register("hpCancellation")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Insurance</label>
+            <input
+              placeholder="Insurance"
+              type="number"
+              {...register("insurance")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Agent Commision</label>
+            <input
+              placeholder="Agent Commision"
+              type="number"
+              {...register("agentCommision")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Office Rent</label>
+            <input
+              placeholder="Office Rent"
+              type="number"
+              {...register("officeRent")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Office Management Salary</label>
+            <input
+              placeholder="Office Management Salary"
+              type="number"
+              {...register("officeManagementSalary")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Office Other expense</label>
+            <input
+              placeholder="Office Other Expense"
+              type="number"
+              {...register("officeOtherExpense")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Office Bank & Audit Changes</label>
+            <input
+              placeholder="Office Bank & Auditing Changes"
+              type="number"
+              {...register("officeBankAuditChanges")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Disbursed Amount</label>
+            <input
+              type="text"
+              readOnly
+              value={
+                watch("actualAmount")
+                  ? `₹${parseFloat(watch("actualAmount")).toLocaleString(
+                      "en-IN"
+                    )}`
+                  : ""
+              }
+              placeholder="Disbursed Amount"
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
+          <div>
+            <label className="block mb-1">Total Payable</label>
+            <input
+              type="text"
+              readOnly
+              value={
+                watch("totalPayable")
+                  ? `₹${parseFloat(watch("totalPayable")).toLocaleString(
+                      "en-IN"
+                    )}`
+                  : ""
+              }
+              placeholder="Total Payable"
+              className="p-2 rounded bg-gray-700 w-full"
+            />
           </div>
 
           <button
