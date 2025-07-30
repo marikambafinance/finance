@@ -924,12 +924,14 @@ def update_repayment():
         total_payable = round(data["totalPayable"], 2)
         total_paid = round(data["totalPaid"], 2)
         total_amount_due = total_payable-total_paid
+        total_penalty = round(float(data["totalPenaltySum"]),2)
+        penalty_balance = total_penalty - penalty_paid
         update_result = db.loans.update_one(
             {"loanId": loan_id},
             {"$set": {"totalPayable": str(total_payable),"totalPaid":str(total_paid),
                       "totalAmountDue":str(total_amount_due),
-                      "totalPenalty":str(round(data["totalPenaltySum"],2)),
-                      "penaltyBalance":str(round(float(data["totalPenaltySum"])-penalty_paid),2)
+                      "totalPenalty": str(total_penalty),
+                      "penaltyBalance":str(penalty_balance)
                       }}
         )
         if result.matched_count == 0:
