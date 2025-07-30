@@ -833,6 +833,7 @@ def update_repayment():
     payment_date= datetime.now(ZoneInfo("Asia/Kolkata"))
     amount_due = float(data["amountDue"])
     penalty_paid = float(data["penaltyPaid"])
+    
 
     
     if status !="partial":
@@ -869,7 +870,7 @@ def update_repayment():
                 "remainingPayment":remainingPayment,
             }}
         )
-        hpNumber = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"_id":0})
+        loan = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"totalPayWithPenalty":1,"_id":0})
 
                 
         amount_to_update = (
@@ -879,7 +880,7 @@ def update_repayment():
             )
         if amount_to_update >0:              
             update_ledger = db.ledger.insert_one({
-                "hpNumber":hpNumber["hpNumber"],
+                "hpNumber":loan["hpNumber"],
                 "loanId":loan_id,
                 "paymentId":payment_id,
                 "paymentMode":payment_mode,
@@ -926,12 +927,15 @@ def update_repayment():
         total_amount_due = total_payable-total_paid
         total_penalty = round(float(data["totalPenaltySum"]),2)
         penalty_balance = total_penalty - penalty_paid
+        total_Pay_With_Penalty = total_payable + total_penalty
+
         update_result = db.loans.update_one(
             {"loanId": loan_id},
             {"$set": {"totalPayable": str(total_payable),"totalPaid":str(total_paid),
                       "totalAmountDue":str(total_amount_due),
                       "totalPenalty": str(total_penalty),
-                      "penaltyBalance":str(penalty_balance)
+                      "penaltyBalance":str(penalty_balance),
+                      "totalPayWithPenalty":str(total_Pay_With_Penalty)
                       }}
         )
         if result.matched_count == 0:
