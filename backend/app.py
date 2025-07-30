@@ -1067,7 +1067,7 @@ def dashboard_stats():
         active_total_data = active_total_list[0] if active_total_list else {}
 
         # Extract fields
-        recovery_agent_amount = overall_data.get("recoveryAgentAmount", 0)
+        #recovery_agent_amount = overall_data.get("recoveryAgentAmount", 0)
         paid_count_active_loans = active_paid_data.get("paidCount", 0)
         total_active_repayment_count = active_total_data.get("totalActiveRepayments", 0)
 
@@ -1172,7 +1172,7 @@ def dashboard_stats():
                 "amountReceived": round(float(total_amount_paid), 2),
                 "interestCollected": round(float(total_interest_collected), 2),
                 "penaltyAmount": round(float(total_penalty), 2),
-                "recoveryAgentAmount": round(float(recovery_agent_amount),2),
+                #"recoveryAgentAmount": round(float(recovery_agent_amount),2),
                 "actualAmountIssued":round(float(loan_data.get("totalactualAmountIssued")),2)
             },
             "averages": {
