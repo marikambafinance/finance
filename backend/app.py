@@ -22,7 +22,7 @@ CORS(app)  # Allows requests from all origins (React frontend)
   # Twilio's sandbox number (or your purchased number)
 # MongoDB connection (replace with your actual credentials)
 #load_dotenv() 
-mongo_uri=os.getenv("MONGO_URI")
+mongo_uri=os.getenv("mongodb+srv://mariamma:0dkg0bIoBxIlDIww@cluster0.yw4vtrc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 client = MongoClient(mongo_uri)
 db = client.users
 collection = db.customers
@@ -1058,7 +1058,7 @@ def dashboard_stats():
             # Process the results
         repayment_data = next(repayment_stats, {})
         overall_list = repayment_data.get("overall", [])
-        overall_data = overall_list[0] if overall_list else {}
+        #overall_data = overall_list[0] if overall_list else {}
 
         active_paid_list = repayment_data.get("activePaid", [])
         active_paid_data = active_paid_list[0] if active_paid_list else {}
