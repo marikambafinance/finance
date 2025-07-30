@@ -1002,10 +1002,18 @@ def dashboard_stats():
                     "activeLoans": {"$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}},
                     "closedLoans": {"$sum": {"$cond": [{"$ne": ["$status", "active"]}, 1, 0]}},
                     "amountIssued": {"$sum": {"$toDouble": "$loanAmount"}},
-                    "foreClosedInterest": {"$sum":{"$toDouble": "$foreCloseNetInterest"}},
-                    "dashboardPenalty": {"$sum":{"$toDouble": "$totalPenalty"}},
-                    "totalactualAmountIssued":{"$sum":{"$toDouble": "$actualAmount"}},
-                }
+                    
+                            "foreClosedInterest": {
+                                "$sum": { "$toDouble": { "$ifNull": ["$foreCloseNetInterest", 0] } }
+                            },
+                            "dashboardPenalty": {
+                                "$sum": { "$toDouble": { "$ifNull": ["$totalPenalty", 0] } }
+                            },
+                            "totalactualAmountIssued": {
+                                "$sum": { "$toDouble": { "$ifNull": ["$actualAmount", 0] } }
+                            
+                            }
+                                            }
             }
         ])
         loan_data = next(loan_stats, {})
