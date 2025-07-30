@@ -996,7 +996,9 @@ def dashboard_stats():
                     "activeLoans": {"$sum": {"$cond": [{"$eq": ["$status", "active"]}, 1, 0]}},
                     "closedLoans": {"$sum": {"$cond": [{"$ne": ["$status", "active"]}, 1, 0]}},
                     "amountIssued": {"$sum": {"$toDouble": "$loanAmount"}},
-                    "foreClosedInterest": {"$sum":{"$toDouble": "$foreCloseNetInterest"}}
+                    "foreClosedInterest": {"$sum":{"$toDouble": "$foreCloseNetInterest"}},
+                    "dashboardPenalty": {"$sum":{"$toDouble": "$totalPenalty"}},
+                    "totalactualAmountIssued":{"$sum":{"$toDouble": "$actualAmount"}},
                 }
             }
         ])
@@ -1028,23 +1030,6 @@ def dashboard_stats():
                 { "$unwind": "$loan" },
                 {
                     "$facet": {
-                        "overall": [
-                            {
-                                "$group": {
-                                    "_id": None,
-                                    "totalPenalty": { "$sum": { "$toDouble": "$penalty" } },
-                                    "recoveryAgentAmount": {
-                                        "$sum": {
-                                            "$cond": [
-                                                { "$eq": ["$recoveryAgent", True] },
-                                                { "$toDouble": "$amountPaid" },
-                                                0
-                                            ]
-                                        }
-                                    }
-                                }
-                            }
-                        ],
                         "activePaid": [
                             { "$match": { "status": "paid", "loan.status": "active" } },
                             {
@@ -1076,7 +1061,6 @@ def dashboard_stats():
         active_total_data = active_total_list[0] if active_total_list else {}
 
         # Extract fields
-        total_penalty = overall_data.get("totalPenalty", 0)
         recovery_agent_amount = overall_data.get("recoveryAgentAmount", 0)
         paid_count_active_loans = active_paid_data.get("paidCount", 0)
         total_active_repayment_count = active_total_data.get("totalActiveRepayments", 0)
@@ -1168,6 +1152,7 @@ def dashboard_stats():
         # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
         amount_issued = loan_data.get("amountIssued", 0)
+        total_penalty = loan_data.get("dashboardPenalty",0)
         avg_loan = round(amount_issued / total_loans, 2) if total_loans else 0
 
         return jsonify({
@@ -1181,7 +1166,8 @@ def dashboard_stats():
                 "amountReceived": round(float(total_amount_paid), 2),
                 "interestCollected": round(float(total_interest_collected), 2),
                 "penaltyAmount": round(float(total_penalty), 2),
-                "recoveryAgentAmount": round(float(recovery_agent_amount),2)
+                "recoveryAgentAmount": round(float(recovery_agent_amount),2),
+                "actualAmountIssued":round(float(loan_data.get("totalactualAmountIssued")),2)
             },
             "averages": {
                 "loanSize": avg_loan,
