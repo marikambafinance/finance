@@ -1192,7 +1192,7 @@ def dashboard_stats():
                 "penaltyAmount": round(float(total_penalty_paid or 0), 2),
                 "penaltyBalance":round(float(penalty_balance or 2),2),
                 "agreementFees":round(float(total_agreement_amount or 2),2),
-                "netProfit": round(float(total_agreement_amount or 2),2)+ round(float(total_interest_collected or 0), 2),
+                "netProfit": round(float(total_agreement_amount or 2),2)+ round(float(total_interest_collected or 0), 2) + round(float(total_penalty_paid or 0), 2),
                 #"recoveryAgentAmount": round(float(recovery_agent_amount),2),
                 "actualAmountIssued": round(float(loan_data.get("totalactualAmountIssued",0)), 2)
             },
