@@ -1007,12 +1007,13 @@ def dashboard_stats():
                                 "$sum": { "$toDouble": { "$ifNull": ["$foreCloseNetInterest", 0] } }
                             },
                             "dashboardPenalty": {
-                                "$sum": { "$toDouble": { "$ifNull": ["$totalPenalty", 0] } }
+                                "$sum": { "$toDouble": { "$ifNull": ["$penaltyPaid", 0] } }
                             },
                             "totalactualAmountIssued": {
                                 "$sum": { "$toDouble": { "$ifNull": ["$actualAmount", 0] } }
                             
                             }
+                        
                                             }
             }
         ])
@@ -1166,7 +1167,7 @@ def dashboard_stats():
         # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
         amount_issued = loan_data.get("amountIssued", 0)
-        total_penalty = loan_data.get("dashboardPenalty",0)
+        total_penalty_paid = loan_data.get("dashboardPenalty",0)
         avg_loan = round(amount_issued / total_loans, 2) if total_loans else 0
 
         return jsonify({
@@ -1179,7 +1180,7 @@ def dashboard_stats():
                 "amountIssued": round(total_amount_issued, 2),
                 "amountReceived": round(float(total_amount_paid or 0), 2),
                 "interestCollected": round(float(total_interest_collected or 0), 2),
-                "penaltyAmount": round(float(total_penalty or 0), 2),
+                "penaltyAmount": round(float(total_penalty_paid or 0), 2),
                 #"recoveryAgentAmount": round(float(recovery_agent_amount),2),
                 "actualAmountIssued": round(float(loan_data.get("totalactualAmountIssued",0)), 2)
             },
