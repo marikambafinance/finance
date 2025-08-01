@@ -65,11 +65,14 @@ const Dashboard = () => {
           <StatCard label="Total Loans" value={totals?.loans || 0} />
           <StatCard label="Closed Loans" value={totals?.closedLoans || 0} />
           <StatCard label="Penalty Collected" value={totals?.penaltyAmount || 0} />
+          <StatCard label="Penalty Balance" value={totals?.penaltyBalance || 0} />
           <StatCard
             onClick={() => setShow(true)}
             label="Total Customers"
             value={`${totals?.customers || 0}`}
           />
+          <StatCard label="Agreement Fees" value={totals?.agreementFees || 0} />
+          <StatCard label="Net Profit" value={totals?.netProfit || 0} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 w-full">

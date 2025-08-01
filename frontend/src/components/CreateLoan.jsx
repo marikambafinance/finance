@@ -37,11 +37,11 @@ const CreateLoanPage = () => {
   const hpCancellation = watch("hpCancellation");
   const insurance = watch("insurance");
   const agentCommision = watch("agentCommision");
-  const officeRent = watch("officeRent");
-  const officeManagementSalary = watch("officeManagementSalary");
-  const officeOtherExpense = watch("officeOtherExpense");
-  const officeBankAuditchanges = watch("officeBankAuditChanges");
-  const disbursedAmount = watch("actualAmount");
+  // const officeRent = watch("officeRent");
+  // const officeManagementSalary = watch("officeManagementSalary");
+  // const officeOtherExpense = watch("officeOtherExpense");
+  // const officeBankAuditchanges = watch("officeBankAuditChanges");
+  // const disbursedAmount = watch("actualAmount");
 
   useEffect(() => {
     if (!loanAmount || !interestRate || !loanTerm) {
@@ -107,11 +107,12 @@ const CreateLoanPage = () => {
         parseFloat(hpEntry || 0) +
         parseFloat(hpCancellation || 0) +
         parseFloat(insurance || 0) +
-        parseFloat(agentCommision || 0) +
-        parseFloat(officeRent || 0) +
-        parseFloat(officeManagementSalary || 0) +
-        parseFloat(officeOtherExpense || 0) +
-        parseFloat(officeBankAuditchanges || 0))
+        parseFloat(agentCommision || 0) 
+        // parseFloat(officeRent || 0) +
+        // parseFloat(officeManagementSalary || 0) +
+        // parseFloat(officeOtherExpense || 0) +
+        // parseFloat(officeBankAuditchanges || 0)
+      )
     ).toFixed(2);
 
     setValue("actualAmount", finalAmount);
@@ -123,10 +124,10 @@ const CreateLoanPage = () => {
     hpCancellation,
     insurance,
     agentCommision,
-    officeRent,
-    officeManagementSalary,
-    officeOtherExpense,
-    officeBankAuditchanges,
+    // officeRent,
+    // officeManagementSalary,
+    // officeOtherExpense,
+    // officeBankAuditchanges,
     setValue,
   ]);
 
@@ -309,7 +310,7 @@ const CreateLoanPage = () => {
               className="p-2 rounded bg-gray-700 w-full"
             />
           </div>
-          <div>
+          {/* <div>
             <label className="block mb-1">Office Rent</label>
             <input
               placeholder="Office Rent"
@@ -344,7 +345,7 @@ const CreateLoanPage = () => {
               {...register("officeBankAuditChanges")}
               className="p-2 rounded bg-gray-700 w-full"
             />
-          </div>
+          </div> */}
 
           <div>
             <label className="block mb-1">Disbursed Amount</label>
