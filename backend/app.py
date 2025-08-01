@@ -1012,7 +1012,10 @@ def dashboard_stats():
                             "totalactualAmountIssued": {
                                 "$sum": { "$toDouble": { "$ifNull": ["$actualAmount", 0] } }
                             
-                            }
+                            },
+                             "totalPenaltyBalance": {
+                                "$sum": { "$toDouble": { "$ifNull": ["$penaltyBalance", 0] } }
+                            },
                         
                                             }
             }
@@ -1167,6 +1170,7 @@ def dashboard_stats():
         # Average Loan
         total_loans = loan_data.get("totalLoans", 0)
         amount_issued = loan_data.get("amountIssued", 0)
+        penalty_balance = loan_data.get("totalPenaltyBalance",0)
         total_penalty_paid = loan_data.get("dashboardPenalty",0)
         avg_loan = round(amount_issued / total_loans, 2) if total_loans else 0
 
@@ -1181,6 +1185,7 @@ def dashboard_stats():
                 "amountReceived": round(float(total_amount_paid or 0), 2),
                 "interestCollected": round(float(total_interest_collected or 0), 2),
                 "penaltyAmount": round(float(total_penalty_paid or 0), 2),
+                "penaltyBalance":round(float(penalty_balance or 2),2),
                 #"recoveryAgentAmount": round(float(recovery_agent_amount),2),
                 "actualAmountIssued": round(float(loan_data.get("totalactualAmountIssued",0)), 2)
             },
