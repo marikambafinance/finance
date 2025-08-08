@@ -15,6 +15,9 @@ import useForeclosure from "../hooks/useForeclosure";
 import usePenalty from "../hooks/usePenalty";
 import ForeclosePopup from "../components/ForeclosePopup";
 
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+const FORECLOSE_BALANCE = import.meta.env.VITE_FORECLOSE_BALANCE;
+
 const LoanRepayments = () => {
   const fetchLoanWithRepayments = useLoanWithRepaymentsList();
   const { payPenalty } = usePenalty();
@@ -67,17 +70,14 @@ const LoanRepayments = () => {
   };
 
   const fetchForecloseBalance = async () => {
-    const res = await fetch(
-      "https://mariamma-finance-4d56.onrender.com/foreclose_balance",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "marikambafinance@123",
-        },
-        body: JSON.stringify({ loanId }),
-      }
-    );
+    const res = await fetch(FORECLOSE_BALANCE, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": HEADER_VALUE,
+      },
+      body: JSON.stringify({ loanId }),
+    });
     const data = await res.json();
     console.log(data);
     return data;
@@ -204,17 +204,17 @@ const LoanRepayments = () => {
                 <InfoItem
                   icon={BadgeDollarSign}
                   label="Disbursed Amount"
-                  value={`₹${parseFloat(loanDetails.actualAmount).toLocaleString(
-                    "en-IN"
-                  )}`}
+                  value={`₹${parseFloat(
+                    loanDetails.actualAmount
+                  ).toLocaleString("en-IN")}`}
                   valueClass="text-[#88b8ff]"
                 />
                 <InfoItem
                   icon={BadgeDollarSign}
                   label="Initial Total Pay"
-                  value={`₹${parseFloat(
-                    loanDetails.initialPay
-                  ).toLocaleString("en-IN")}`}
+                  value={`₹${parseFloat(loanDetails.initialPay).toLocaleString(
+                    "en-IN"
+                  )}`}
                   valueClass="text-[#88b8ff]"
                 />
                 <InfoItem

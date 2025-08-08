@@ -5,12 +5,15 @@ import Loader from "./Loader";
 import { usePopupContext } from "../context/PopupContext";
 import Popup from "./Popup";
 
+const VITE_UPDATE_REPAYMENT = import.meta.env.VITE_UPDATE_REPAYMENT;
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+
 const RepaymentCard = ({
   repayment,
   onUpdateSuccess,
   updateLoans,
   hpNumber,
-  penaltyPaid
+  penaltyPaid,
 }) => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -144,17 +147,14 @@ const RepaymentCard = ({
   const updateRepayment = async (data) => {
     data.penaltyPaid = penaltyPaid;
     try {
-      const res = await fetch(
-        "https://mariamma-finance-4d56.onrender.com/update_repayment",
-        {
-          method: "POST",
-          headers: {
-            "x-api-key": "marikambafinance@123",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        }
-      );
+      const res = await fetch(VITE_UPDATE_REPAYMENT, {
+        method: "POST",
+        headers: {
+          "x-api-key": HEADER_VALUE,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
       const result = await res.json();
       if (!res.ok) throw new Error(result?.message);
       setShowPopup(true);

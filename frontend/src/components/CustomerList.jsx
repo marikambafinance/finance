@@ -6,6 +6,10 @@ import { useCustomersList } from "../hooks/useCustomersList";
 import { useCustomers } from "../context/CustomersContext";
 import { useNavigate } from "react-router-dom";
 
+const NEXT_ID = import.meta.env.VITE_NEXT_ID;
+const PREV_ID = import.meta.env.VITE_PREV_ID;
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+
 const CustomerList = () => {
   const { loading, error, setLoading, getCustomersList } = useCustomersList();
   const { customers, setCustomers } = useCustomers();
@@ -19,33 +23,31 @@ const CustomerList = () => {
   };
 
   const handleNext = async () => {
-    if(!customers?.next_id) return;
-    navigate(`?next_id=${customers?.next_id}`)
-    console.log(customers?.next_id)
-    const res = await fetch(`https://mariamma-finance-4d56.onrender.com/customers?next_id=${customers?.next_id}`,{
-        headers: {
-          "x-api-key": "marikambafinance@123",
-        },
-      }
-    );
+    if (!customers?.next_id) return;
+    navigate(`?next_id=${customers?.next_id}`);
+    console.log(customers?.next_id);
+    const res = await fetch(NEXT_ID + customers?.next_id, {
+      headers: {
+        "x-api-key": HEADER_VALUE,
+      },
+    });
     const data = await res.json();
     setCustomers(data);
-    console.log(data)
+    console.log(data);
   };
 
   const handlePrev = async () => {
-    if(!customers?.prev_id) return;
-    navigate(`?prev_id=${customers?.prev_id}`)
-    console.log(customers?.prev_id)
-    const res = await fetch(`https://mariamma-finance-4d56.onrender.com/customers?prev_id=${customers?.prev_id}`,{
-        headers: {
-          "x-api-key": "marikambafinance@123",
-        },
-      }
-    );
+    if (!customers?.prev_id) return;
+    navigate(`?prev_id=${customers?.prev_id}`);
+    console.log(customers?.prev_id);
+    const res = await fetch(PREV_ID + customers?.prev_id, {
+      headers: {
+        "x-api-key": HEADER_VALUE,
+      },
+    });
     const data = await res.json();
     setCustomers(data);
-    console.log(data)
+    console.log(data);
   };
 
   return (
@@ -55,7 +57,7 @@ const CustomerList = () => {
           <h2 className="text-3xl font-bold text-teal-300">Customers List</h2>
         </div>
         <div className="flex justify-center items-center">
-          <Search setLoading={setLoading}/>
+          <Search setLoading={setLoading} />
           <button
             onClick={handleRefresh}
             className="bg-teal-500 hover:bg-teal-600 mb-6 text-white px-6 py-2 rounded-full shadow"
@@ -97,7 +99,9 @@ const CustomerList = () => {
         <button
           disabled={customers?.prev_id === null}
           onClick={handlePrev}
-          className={`px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 ${customers?.prev_id ? "" : "cursor-not-allowed"}`}
+          className={`px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 ${
+            customers?.prev_id ? "" : "cursor-not-allowed"
+          }`}
         >
           Prev
         </button>
@@ -105,7 +109,9 @@ const CustomerList = () => {
         <button
           disabled={customers?.next_id === null}
           onClick={handleNext}
-          className={`px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-500 disabled:opacity-50 ${customers?.next_id ? "" : "cursor-not-allowed"}`}
+          className={`px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-500 disabled:opacity-50 ${
+            customers?.next_id ? "" : "cursor-not-allowed"
+          }`}
         >
           Next
         </button>

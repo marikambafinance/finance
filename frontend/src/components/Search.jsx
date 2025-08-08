@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { useCustomers } from "../context/CustomersContext";
 import { useCustomersList } from "../hooks/useCustomersList";
 
-const Search = ({setLoading}) => {
+const SEARCH = import.meta.env.VITE_SEARCH;
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+
+const Search = ({ setLoading }) => {
   const { customers, setCustomers } = useCustomers();
   const [search, setSearch] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -14,17 +17,17 @@ const Search = ({setLoading}) => {
         setCustomers(customerList);
         return;
       }
-      setLoading(true)
+      setLoading(true);
       let data = { [searchKey]: search };
-      const res = await fetch("https://mariamma-finance-4d56.onrender.com/search", {
+      const res = await fetch(SEARCH, {
         method: "POST",
         headers: {
-          "x-api-key": "marikambafinance@123",
+          "x-api-key": HEADER_VALUE,
         },
         body: JSON.stringify(data),
       });
       const result = await res.json();
-      setLoading(false)
+      setLoading(false);
       setCustomers({ customers: result?.search_reponse });
       setSearch("");
     } catch (error) {

@@ -4,6 +4,9 @@ import { usePopupContext } from "../context/PopupContext";
 import Popup from "./Popup";
 import Loader from "./Loader";
 
+const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
+const CREATE_LOAN = import.meta.env.VITE_CREATE_LOAN;
+
 const CreateLoanPage = () => {
   const { showPopup, setShowPopup, setType, setMessage } = usePopupContext();
   const [loading, setLoading] = useState(false);
@@ -66,17 +69,14 @@ const CreateLoanPage = () => {
     console.log(data);
 
     try {
-      const res = await fetch(
-        "https://mariamma-finance-4d56.onrender.com/loan",
-        {
-          method: "POST",
-          headers: {
-            "x-api-key": "marikambafinance@123",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        }
-      );
+      const res = await fetch(CREATE_LOAN, {
+        method: "POST",
+        headers: {
+          "x-api-key": HEADER_VALUE,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
       const result = await res.json();
 
@@ -107,12 +107,11 @@ const CreateLoanPage = () => {
         parseFloat(hpEntry || 0) +
         parseFloat(hpCancellation || 0) +
         parseFloat(insurance || 0) +
-        parseFloat(agentCommision || 0) 
-        // parseFloat(officeRent || 0) +
-        // parseFloat(officeManagementSalary || 0) +
-        // parseFloat(officeOtherExpense || 0) +
-        // parseFloat(officeBankAuditchanges || 0)
-      )
+        parseFloat(agentCommision || 0))
+      // parseFloat(officeRent || 0) +
+      // parseFloat(officeManagementSalary || 0) +
+      // parseFloat(officeOtherExpense || 0) +
+      // parseFloat(officeBankAuditchanges || 0)
     ).toFixed(2);
 
     setValue("actualAmount", finalAmount);
