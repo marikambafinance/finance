@@ -308,31 +308,7 @@ const RepaymentCard = ({
 
         <div className="flex flex-col w-40">
           <span className="text-xs text-gray-400">Status</span>
-          {repayment?.status === "partial" ? (
-            <span
-              className={`p-2 rounded text-sm ${
-                status === "pending"
-                  ? "bg-amber-600"
-                  : watch("status") === "paid"
-                  ? "bg-green-500"
-                  : "bg-[#007292]"
-              } text-white`}
-            >
-              {watch("status")}
-            </span>
-          ) : repayment?.status === "paid" ? (
-            <span
-              className={`p-2 rounded text-sm ${
-                status === "pending"
-                  ? "bg-amber-600"
-                  : watch("status") === "paid"
-                  ? "bg-green-500"
-                  : "bg-[#007292]"
-              } text-white`}
-            >
-              {watch("status")}
-            </span>
-          ) : (
+          {editMode ? (
             <select
               {...register("status")}
               onChange={handleStatusChange}
@@ -348,6 +324,18 @@ const RepaymentCard = ({
               <option value="paid">paid</option>
               <option value="partial">partial</option>
             </select>
+          ) : (
+            <span
+              className={`p-2 rounded text-sm ${
+                status === "pending"
+                  ? "bg-amber-600"
+                  : watch("status") === "paid"
+                  ? "bg-green-500"
+                  : "bg-[#007292]"
+              } text-white`}
+            >
+              {watch("status")}
+            </span>
           )}
         </div>
 

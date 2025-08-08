@@ -40,6 +40,7 @@ const CreateLoanPage = () => {
   const hpCancellation = watch("hpCancellation");
   const insurance = watch("insurance");
   const agentCommision = watch("agentCommision");
+  const to = watch("to");
   // const officeRent = watch("officeRent");
   // const officeManagementSalary = watch("officeManagementSalary");
   // const officeOtherExpense = watch("officeOtherExpense");
@@ -107,12 +108,14 @@ const CreateLoanPage = () => {
         parseFloat(hpEntry || 0) +
         parseFloat(hpCancellation || 0) +
         parseFloat(insurance || 0) +
+        parseFloat(to || 0) +
         parseFloat(agentCommision || 0))
+    )
       // parseFloat(officeRent || 0) +
       // parseFloat(officeManagementSalary || 0) +
       // parseFloat(officeOtherExpense || 0) +
       // parseFloat(officeBankAuditchanges || 0)
-    ).toFixed(2);
+      .toFixed(2);
 
     setValue("actualAmount", finalAmount);
   }, [
@@ -122,6 +125,7 @@ const CreateLoanPage = () => {
     hpEntry,
     hpCancellation,
     insurance,
+    to,
     agentCommision,
     // officeRent,
     // officeManagementSalary,
@@ -267,6 +271,7 @@ const CreateLoanPage = () => {
             <input
               placeholder="Agreement"
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("agreement")}
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -276,6 +281,7 @@ const CreateLoanPage = () => {
             <input
               placeholder="HP Entry"
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("hpEntry")}
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -286,6 +292,7 @@ const CreateLoanPage = () => {
             <input
               placeholder="HP Cancellation"
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("hpCancellation")}
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -296,6 +303,7 @@ const CreateLoanPage = () => {
             <input
               placeholder="Insurance"
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("insurance")}
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -305,6 +313,7 @@ const CreateLoanPage = () => {
             <input
               placeholder="Agent Commision"
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("agentCommision")}
               className="p-2 rounded bg-gray-700 w-full"
             />
@@ -345,6 +354,16 @@ const CreateLoanPage = () => {
               className="p-2 rounded bg-gray-700 w-full"
             />
           </div> */}
+          <div>
+            <label className="block mb-1">Transfer (TO)</label>
+            <input
+              placeholder="Transfer (TO)"
+              type="number"
+              onWheel={(e) => e.target.blur()}
+              {...register("to")}
+              className="p-2 rounded bg-gray-700 w-full"
+            />
+          </div>
 
           <div>
             <label className="block mb-1">Disbursed Amount</label>
