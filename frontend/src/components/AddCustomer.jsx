@@ -140,6 +140,7 @@ const AddCustomer = () => {
             <input
               type="number"
               placeholder="Ex: 2016"
+              onWheel={(e) => e.target.blur()}
               {...register("vehicleModel", {
                 required: "Vehicle Model is required",
               })}
@@ -261,6 +262,7 @@ const AddCustomer = () => {
             <label className="block mb-1">Annual Income</label>
             <input
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("annualIncome")}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />

@@ -169,6 +169,7 @@ const CreateLoanPage = () => {
             <input
               type="number"
               placeholder="Loan Amount"
+              onWheel={(e) => e.target.blur()}
               {...register("loanAmount", {
                 required: "Loan amount is required.",
                 min: {
@@ -190,6 +191,7 @@ const CreateLoanPage = () => {
             <input
               placeholder="Interest Rate"
               type="number"
+              onWheel={(e) => e.target.blur()}
               {...register("interestRate")}
               className="p-2 rounded bg-gray-700 w-full"
             />

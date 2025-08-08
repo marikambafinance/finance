@@ -299,6 +299,7 @@ const LoanRepayments = () => {
                         <input
                           {...registerAutoPayment("amount")}
                           type="number"
+                          onWheel={(e) => e.target.blur()}
                           className="p-2 rounded bg-gray-700 text-white"
                         />
                       </div>
@@ -336,6 +337,7 @@ const LoanRepayments = () => {
                         <input
                           {...registerPenalty("penaltyDuePaid")}
                           type="number"
+                          onWheel={(e) => e.target.blur()}
                           className="p-2 rounded bg-gray-700 text-white"
                         />
                       </div>
