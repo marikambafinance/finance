@@ -317,159 +317,144 @@ def total_loan_payable(hpNumber):
 
 def get_cust_loans_info(hpNumber):
     pipeline = [
-    # Match customer by hpNumber
-    { "$match": { "hpNumber": hpNumber } },
+        {"$match": {"hpNumber": hpNumber}},
 
-    # Lookup loans
-    {
-        "$lookup": {
-            "from": "loans",
-            "localField": "hpNumber",
-            "foreignField": "hpNumber",
-            "as": "loanList"
-        }
-    },
+        # Lookup loans
+        {
+            "$lookup": {
+                "from": "loans",
+                "localField": "hpNumber",
+                "foreignField": "hpNumber",
+                "as": "loans"
+            }
+        },
 
-    # Unwind loans (preserving customers with no loans)
-    {
-        "$unwind": {
-            "path": "$loanList",
-            "preserveNullAndEmptyArrays": True
-        }
-    },
-
-    # Lookup repayment stats if loan exists
-    {
-        "$lookup": {
-            "from": "repayments",
-            "let": { "loanId": "$loanList.loanId" },
-            "pipeline": [
-                {
-                    "$match": {
-                        "$expr": { "$eq": ["$loanId", "$$loanId"] }
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": "$loanId",
-                        "missedCount": {
-                            "$sum": {
-                                "$cond": [
-                                    {
-                                        "$and": [
-                                            { "$ne": ["$status", "paid"] },
-                                            { "$lt": ["$dueDate", datetime.now()] }
-                                        ]
-                                    },
-                                    1,
-                                    0
-                                ]
-                            }
-                        },
-                        "latePaymentCount": {
-                            "$sum": {
-                                "$cond": [
-                                    {
-                                        "$and": [
-                                            { "$eq": ["$status", "paid"] },
-                                            { "$gt": ["$paidDate", "$dueDate"] }
-                                        ]
-                                    },
-                                    1,
-                                    0
-                                ]
-                            }
-                        },
-                         "monthsPaid": {
+        # Lookup repayments and calculate stats
+        {
+            "$lookup": {
+                "from": "repayments",
+                "pipeline": [
+                    {
+                        "$group": {
+                            "_id": "$loanId",
+                            "totalPaid": {
                                 "$sum": {
                                     "$cond": [
-                                        { "$eq": ["$status", "paid"] },
+                                        {"$eq": ["$status", "paid"]},
+                                        {"$toDouble": "$amountPaid"},
+                                        0
+                                    ]
+                                }
+                            },
+                            # monthsPaid = number of repayments with status = paid
+                            "monthsPaid": {
+                                "$sum": {"$cond": [{"$eq": ["$status", "paid"]}, 1, 0]}
+                            },
+                            "latePaymentCount": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$and": [
+                                                {"$eq": ["$status", "paid"]},
+                                                {"$gt": ["$paymentDate", "$dueDate"]}
+                                            ]
+                                        },
                                         1,
                                         0
-                                ]
-                            }
-                        }
-                    }
-                }
-            ],
-            "as": "repayment_summary"
-        }
-    },
-
-    # Merge loan + repayment only if loan exists
-    {
-        "$addFields": {
-            "loanWithStats": {
-                "$cond": [
-                    { "$ne": ["$loanList", None] },
-                    {
-                        "$mergeObjects": [
-                            "$loanList",
-                            {
-                                "missedCount": {
-                                    "$ifNull": [
-                                        { "$arrayElemAt": ["$repayment_summary.missedCount", 0] },
-                                        0
                                     ]
-                                },
-                                "latePaymentCount": {
-                                    "$ifNull": [
-                                        { "$arrayElemAt": ["$repayment_summary.latePaymentCount", 0] },
-                                        0
-                                    ]
-                                },
-                                "monthsPaid": {
-                                    "$ifNull": [
-                                        { "$arrayElemAt": ["$repayment_summary.monthsPaid", 0] },
+                                }
+                            },
+                            # missedCount = pending + overdue
+                            "missedCount": {
+                                "$sum": {
+                                    "$cond": [
+                                        {
+                                            "$and": [
+                                                {"$eq": ["$status", "pending"]},
+                                                {"$lt": ["$dueDate", "$$NOW"]}
+                                            ]
+                                        },
+                                        1,
                                         0
                                     ]
                                 }
                             }
-                        ]
-                    },
-                    None
-                ]
+                        }
+                    }
+                ],
+                "as": "repayment_totals"
             }
-        }
-    },
+        },
 
-    # Group back by customer
-    {
-    "$group": {
-        "_id": "$_id",
-        "customerDetails": { "$push": "$$ROOT" },  # pushes entire document
-        "data": {
-            "$push": {
-                "$cond": [
-                    { "$ne": ["$loanWithStats", None] },
-                    "$loanWithStats",
-                    "$$REMOVE"
-                ]
+        # Merge repayment stats into each loan
+        {
+            "$addFields": {
+                "loans": {
+                    "$map": {
+                        "input": "$loans",
+                        "as": "loan",
+                        "in": {
+                            "$mergeObjects": [
+                                "$$loan",
+                                {
+                                    "$ifNull": [
+                                        {
+                                            "$let": {
+                                                "vars": {
+                                                    "match": {
+                                                        "$first": {
+                                                            "$filter": {
+                                                                "input": "$repayment_totals",
+                                                                "as": "r",
+                                                                "cond": {
+                                                                    "$eq": ["$$r._id", "$$loan.loanId"]
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "in": {
+                                                    "totalPaid": "$$match.totalPaid",
+                                                    "monthsPaid": "$$match.monthsPaid",
+                                                    "latePaymentCount": "$$match.latePaymentCount",
+                                                    "missedCount": "$$match.missedCount"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "totalPaid": 0,
+                                            "monthsPaid": 0,
+                                            "latePaymentCount": 0,
+                                            "missedCount": 0
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
             }
-        }
-    }
-},
+        },
 
+        {"$project": {"repayment_totals": 0}}
+    ]
 
-    # Add status
-    {
-        "$addFields": {
-            "status": "success"
-        }
-    },
+    result = list(db.customers.aggregate(pipeline))
 
-    # Final shape
-    {
-        "$project": {
-            "_id": 0,
-            "customerDetails": 1,
-            "data": 1,
-            "status": 1
-        }
-    }
-]
-    result = list(db.customers.aggregate(pipeline))[0]
-    return result
+    def serialize_object_ids(data):
+        if isinstance(data, list):
+            return [serialize_object_ids(doc) for doc in data]
+        elif isinstance(data, dict):
+            for key in list(data.keys()):
+                if isinstance(data[key], ObjectId):
+                    data[key] = str(data[key])
+                elif isinstance(data[key], (dict, list)):
+                    data[key] = serialize_object_ids(data[key])
+            return data
+        return data
+
+    return serialize_object_ids(result)
+
 
 
 def insert_loan_data(loan_data):
@@ -675,38 +660,8 @@ def get_all_customers():
 def get_all_customers_loans():
     data = request.get_json(force=True)
     if "hpNumber" in data.keys():
-        result = get_cust_loans_info(data["hpNumber"])
-        def serialize(doc):
-            if isinstance(doc, dict):
-                for k, v in doc.items():
-                    if isinstance(v, ObjectId):
-                        doc[k] = str(v)
-                    elif isinstance(v, list):
-                        doc[k] = [serialize(d) if isinstance(d, dict) else d for d in v]
-                    elif isinstance(v, dict):
-                        doc[k] = serialize(v)
-                return doc
-            else:
-                return doc 
-        result = serialize(result)
-        if "loanId" in result["data"][0].keys():
-            pass
-        else:
-            result["data"]=[]
-
-        """
-        return jsonify({
-            "status": "success",
-            "customerDetails": {
-                "firstName": result.get("firstName"),
-                "lastName": result.get("lastName"),
-                "phone": result.get("phone")
-            },
-            "data": result.get("loans", [])
-        })
-        """
-        return result
-       #return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+        serialized_customers = get_cust_loans_info(data["hpNumber"])
+        return jsonify({"customers_data":serialized_customers,"status":"success"}),200
     else:
         return jsonify({"message":"missing hpNumber","status":"error"}),400
 
