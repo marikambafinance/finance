@@ -24,6 +24,7 @@ import useCustomerUpdate from "../hooks/useCustomerUpdate";
 import Loader from "../components/Loader";
 import Popup from "../components/Popup";
 import { usePopupContext } from "../context/PopupContext";
+import LoanCard from "../components/LoanCard";
 
 const CustomerDetails = () => {
   const location = useLocation();
@@ -35,11 +36,36 @@ const CustomerDetails = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const {showPopup, setShowPopup, setType, setMessage} = usePopupContext();
+  const { showPopup, setShowPopup, setType, setMessage } = usePopupContext();
 
   const handleCancel = () => {
     reset(custDetails);
     setIsEditing(false);
+  };
+
+  const dateConverter = (dateString) => {
+    const date = new Date(dateString);
+
+    const dd = String(date.getDate()).padStart(2, "0");
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const mon = monthNames[date.getMonth()];
+    const yyyy = date.getFullYear();
+
+    const formatted = `${dd}-${mon}-${yyyy}`;
+    return formatted;
   };
 
   const {
@@ -261,6 +287,103 @@ const CustomerDetails = () => {
                   />
                 )
               )}
+
+              <div className="flex items-center gap-4 w-full text-white">
+                <div className="p-2 bg-gray-800 rounded-full border border-gray-700">
+                  {React.cloneElement(<MapPin />, {
+                    className: "text-cyan-400 w-5 h-5",
+                  })}
+                </div>
+                <div className="flex-1/3">
+                  <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
+                    Registered On
+                  </label>
+                  <span className="text-base font-medium text-gray-100 truncate">
+                    {dateConverter(custDetails?.InsertedOn)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-semibold text-cyan-300 mb-4 border-b border-gray-700 pb-2">
+              Guarantor Details
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 text-lg">
+              <div className="flex items-center gap-4 w-full text-white">
+                <div className="p-2 bg-gray-800 rounded-full border border-gray-700">
+                  {React.cloneElement(<User />, {
+                    className: "text-cyan-400 w-5 h-5",
+                  })}
+                </div>
+                <div className="flex-1/3">
+                  <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
+                    First Name
+                  </label>
+                  <span className="text-base font-medium text-gray-100 truncate">
+                    {custDetails?.guarantor?.firstName}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 w-full text-white">
+                <div className="p-2 bg-gray-800 rounded-full border border-gray-700">
+                  {React.cloneElement(<User />, {
+                    className: "text-cyan-400 w-5 h-5",
+                  })}
+                </div>
+                <div className="flex-1/3">
+                  <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
+                    Last Name
+                  </label>
+                  <span className="text-base font-medium text-gray-100 truncate">
+                    {custDetails?.guarantor?.lastName}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 w-full text-white">
+                <div className="p-2 bg-gray-800 rounded-full border border-gray-700">
+                  {React.cloneElement(<MapPin />, {
+                    className: "text-cyan-400 w-5 h-5",
+                  })}
+                </div>
+                <div className="flex-1/3">
+                  <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
+                    Address
+                  </label>
+                  <span className="text-base font-medium text-gray-100 truncate">
+                    {custDetails?.guarantor?.address}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 w-full text-white">
+                <div className="p-2 bg-gray-800 rounded-full border border-gray-700">
+                  {React.cloneElement(<IdCard />, {
+                    className: "text-cyan-400 w-5 h-5",
+                  })}
+                </div>
+                <div className="flex-1/3">
+                  <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
+                    Aadhaar/PAN
+                  </label>
+                  <span className="text-base font-medium text-gray-100 truncate">
+                    {custDetails?.guarantor?.aadhaarOrPan}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 w-full text-white">
+                <div className="p-2 bg-gray-800 rounded-full border border-gray-700">
+                  {React.cloneElement(<Phone />, {
+                    className: "text-cyan-400 w-5 h-5",
+                  })}
+                </div>
+                <div className="flex-1/3">
+                  <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
+                    Phone Number
+                  </label>
+                  <span className="text-base font-medium text-gray-100 truncate">
+                    {custDetails?.guarantor?.phone}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Loan Section */}
@@ -270,26 +393,7 @@ const CustomerDetails = () => {
               </h2>
               <div className="space-y-4">
                 {custDetails?.loans.map((loan) => (
-                  <div
-                    key={loan?.loanId}
-                    className="p-5 bg-gray-800 rounded-xl flex justify-between items-center border border-gray-700 hover:bg-gray-700 transition duration-300"
-                  >
-                    <div>
-                      <p className="text-white font-semibold text-lg">
-                        Purpose: {loan.purpose}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        Loan ID: {loan?.loanId}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-lg">Total Amount</p>
-                      <p className="text-cyan-400 font-bold text-xl">
-                        ₹
-                        {parseFloat(loan?.totalPayable).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  </div>
+                  <LoanCard loan={loan} />
                 ))}
               </div>
             </div>
