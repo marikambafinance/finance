@@ -469,21 +469,7 @@ def get_cust_loans_info(hpNumber):
     }
 ]
     result = list(db.customers.aggregate(pipeline))[0]
-    
-   #result = list(db.customers.aggregate(pipeline))
-    def serialize_object_ids(data):
-            if isinstance(data, list):
-                return [serialize_object_ids(doc) for doc in data]
-            elif isinstance(data, dict):
-                for key in list(data.keys()):
-                    if isinstance(data[key], ObjectId):
-                        data[key] = str(data[key])
-                    elif isinstance(data[key], (dict, list)):
-                        data[key] = serialize_object_ids(data[key])
-                return data
-            return data
-    result = serialize_object_ids(result)
-    return list(result)
+    return result
 
 
 def insert_loan_data(loan_data):
