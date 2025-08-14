@@ -462,7 +462,7 @@ def get_cust_loans_info(hpNumber):
     {
         "$project": {
             "_id": 0,
-            "customerDetails": 0,
+            "customerDetails": 1,
             "data": 1,
             "status": 1
         }
@@ -689,8 +689,38 @@ def get_all_customers():
 def get_all_customers_loans():
     data = request.get_json(force=True)
     if "hpNumber" in data.keys():
-        serialized_customers = get_cust_loans_info(data["hpNumber"])
-        return jsonify({"customers_data":serialized_customers,"status":"success"}),200
+        result = get_cust_loans_info(data["hpNumber"])
+        def serialize(doc):
+            if isinstance(doc, dict):
+                for k, v in doc.items():
+                    if isinstance(v, ObjectId):
+                        doc[k] = str(v)
+                    elif isinstance(v, list):
+                        doc[k] = [serialize(d) if isinstance(d, dict) else d for d in v]
+                    elif isinstance(v, dict):
+                        doc[k] = serialize(v)
+                return doc
+            else:
+                return doc 
+        result = serialize(result)
+        if "loanId" in result["data"][0].keys():
+            pass
+        else:
+            result["data"]=[]
+
+        """
+        return jsonify({
+            "status": "success",
+            "customerDetails": {
+                "firstName": result.get("firstName"),
+                "lastName": result.get("lastName"),
+                "phone": result.get("phone")
+            },
+            "data": result.get("loans", [])
+        })
+        """
+        return result
+       #return jsonify({"customers_data":serialized_customers,"status":"success"}),200
     else:
         return jsonify({"message":"missing hpNumber","status":"error"}),400
 
