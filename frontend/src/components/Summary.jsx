@@ -48,15 +48,15 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 w-[100%]">
           <StatCard
             label="Amount Issued"
-            value={`₹${totals?.amountIssued.toLocaleString("en-IN") || 0}`}
+            value={`₹${totals?.amountIssued?.toLocaleString("en-IN") || 0}`}
           />
           <StatCard
             label="Amount Disbursed"
-            value={`₹${totals?.actualAmountIssued.toLocaleString("en-IN") || 0}`}
+            value={`₹${totals?.actualAmountIssued?.toLocaleString("en-IN") || 0}`}
           />
           <StatCard
             label="Amount Received"
-            value={`₹${totals?.amountReceived.toLocaleString("en-IN") || 0}`}
+            value={`₹${totals?.amountReceived?.toLocaleString("en-IN") || 0}`}
           />
           <StatCard
             label="Interest Amount Collected"
