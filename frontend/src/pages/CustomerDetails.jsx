@@ -349,9 +349,12 @@ const CustomerDetails = () => {
                   <label className="block text-sm font-medium text-gray-400 mb-1 whitespace-nowrap">
                     Address
                   </label>
-                  <span className="text-base font-medium text-gray-100 truncate">
+                  <span className="text-base font-medium text-gray-100 max-w-sm rounded break-words whitespace-normal">
                     {custDetails?.guarantor?.address}
                   </span>
+                  {/* <span className="text-base font-medium break-after-all text-gray-100 truncate">
+                    {custDetails?.guarantor?.address}
+                  </span> */}
                 </div>
               </div>
               <div className="flex items-center gap-4 w-full text-white">

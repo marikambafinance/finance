@@ -43,7 +43,7 @@ const EditableFieldWithIcon = ({
             />
           )
         ) : (
-          <span className="text-base font-medium text-gray-100 truncate">
+          <span className="text-base font-medium text-gray-100 max-w-sm rounded break-words whitespace-normal">
             {value || "-"}
           </span>
         )}
