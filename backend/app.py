@@ -1186,7 +1186,7 @@ def dashboard_stats():
                 "loans": total_loans,
                 "activeLoans": loan_data.get("activeLoans", 0),
                 "closedLoans": loan_data.get("closedLoans", 0),
-                "amountIssued": round(total_amount_issued, 2),
+                "amountIssued": round(total_amount_issued, 2) - round(float(total_agreement_amount or 0),2),
                 "amountReceived": round(float(total_amount_paid or 0), 2),
                 "interestCollected": round(float(total_interest_collected or 0), 2),
                 "penaltyAmount": round(float(total_penalty_paid or 0), 2),
