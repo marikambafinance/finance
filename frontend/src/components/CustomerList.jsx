@@ -14,7 +14,6 @@ const CustomerList = () => {
   const { loading, error, setLoading, getCustomersList } = useCustomersList();
   const { customers, setCustomers } = useCustomers();
   const navigate = useNavigate();
-  console.log(customers);
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -25,7 +24,7 @@ const CustomerList = () => {
   const handleNext = async () => {
     if (!customers?.next_id) return;
     navigate(`?next_id=${customers?.next_id}`);
-    console.log(customers?.next_id);
+
     const res = await fetch(NEXT_ID + customers?.next_id, {
       headers: {
         "x-api-key": HEADER_VALUE,
@@ -33,13 +32,11 @@ const CustomerList = () => {
     });
     const data = await res.json();
     setCustomers(data);
-    console.log(data);
   };
 
   const handlePrev = async () => {
     if (!customers?.prev_id) return;
     navigate(`?prev_id=${customers?.prev_id}`);
-    console.log(customers?.prev_id);
     const res = await fetch(PREV_ID + customers?.prev_id, {
       headers: {
         "x-api-key": HEADER_VALUE,
@@ -47,7 +44,6 @@ const CustomerList = () => {
     });
     const data = await res.json();
     setCustomers(data);
-    console.log(data);
   };
 
   return (

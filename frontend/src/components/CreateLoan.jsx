@@ -67,7 +67,6 @@ const CreateLoanPage = () => {
   const onSubmit = async (data) => {
     data.initialPay = totalPayable;
     setLoading(true);
-    console.log(data);
 
     try {
       const res = await fetch(CREATE_LOAN, {

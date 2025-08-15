@@ -17,8 +17,7 @@ const useLoanWithRepaymentsList = ()=>{
             body: JSON.stringify({hpNumber})
         })
         const data = await res.json();
-        console.log(data)
-        setLoanList(data)
+        setLoanList(data);
     }
 
     useEffect(()=>{

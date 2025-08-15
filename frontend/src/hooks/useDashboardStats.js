@@ -16,7 +16,6 @@ const useDashboardStats = ()=>{
 
             const result = await res.json();
             setFinanceData(result);
-            console.log(result)
         } catch (error) {
             console.log(error.message);
         }

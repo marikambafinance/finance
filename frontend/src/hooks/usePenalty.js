@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 
 const PAY_PENALTY = import.meta.env.VITE_PAY_PENALTY;
 const HEADER_VALUE = import.meta.env.VITE_API_HEADER_VALUE;
@@ -14,7 +13,6 @@ const usePenalty = () => {
       body: JSON.stringify(data),
     });
     const result = await res.json();
-    console.log(result);
   };
 
   return { payPenalty };

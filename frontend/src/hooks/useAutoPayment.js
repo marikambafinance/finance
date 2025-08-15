@@ -24,7 +24,6 @@ const useAutoPayment = (setLoading) => {
       setShowPopup(true);
       setType(result?.status || "success");
       setMessage(result?.message);
-      console.log(result);
     } catch (error) {
       setShowPopup(true);
       setType(error.status);

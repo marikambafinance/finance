@@ -40,8 +40,6 @@ const LoanRepayments = () => {
   const [filteredRepayments, setFilteredRepayments] = useState([]);
   const { handleAutoPayment } = useAutoPayment(setLoading);
 
-  console.log(loanDetails);
-
   const {
     register: registerAutoPayment,
     handleSubmit: handleSubmitAutoPayment,
@@ -64,7 +62,7 @@ const LoanRepayments = () => {
     await payPenalty(data);
     await fetchLoanWithRepayments(hpNumber);
     await fetchRepaymentDetails();
-    console.log(data);
+
     resetPenalty();
     setLoading(false);
   };
@@ -79,7 +77,6 @@ const LoanRepayments = () => {
       body: JSON.stringify({ loanId }),
     });
     const data = await res.json();
-    console.log(data);
     return data;
   };
 
@@ -97,7 +94,7 @@ const LoanRepayments = () => {
     if (!data.amount) return;
     setLoading(true);
     const extendedObj = { ...data, loanId: loanId };
-    console.log(extendedObj);
+
     await handleAutoPayment(extendedObj);
     await fetchLoanWithRepayments(hpNumber);
     await fetchRepaymentDetails();
@@ -142,10 +139,8 @@ const LoanRepayments = () => {
     } else {
       setPartialFlag(false);
     }
-    console.log(partialFlag);
   }, [repayments, filteredRepayments]);
 
-  console.log(filteredRepayments);
   const fullName =
     loanList?.customerDetails?.firstName +
     " " +

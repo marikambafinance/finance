@@ -32,7 +32,6 @@ const CustomerDetails = () => {
   const navigate = useNavigate();
   const { hpNumber } = location?.state || {};
   const { custDetails, getCustomerDetails } = useCustomerDetails(hpNumber);
-  console.log(custDetails);
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -209,8 +208,6 @@ const CustomerDetails = () => {
     setType(res?.status);
     setMessage(res?.message);
     setShowPopup(true);
-    console.log(res);
-    console.log(rest);
     await getCustomerDetails();
     setLoading(false);
     setIsEditing(false);

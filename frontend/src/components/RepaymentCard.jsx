@@ -180,7 +180,6 @@ const RepaymentCard = ({
   };
 
   const onSubmit = async (data) => {
-    console.log(data);
     setLoading(true);
     await updateRepayment(data);
     await updateLoans(hpNumber); // <- This should update parent and pass new `repayment`

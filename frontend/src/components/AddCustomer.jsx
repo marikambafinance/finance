@@ -16,7 +16,6 @@ const AddCustomer = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    console.log(data);
     setLoading(true);
 
     try {

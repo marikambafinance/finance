@@ -14,7 +14,6 @@ const useForeclosure = (
   const { setType, setMessage, setShowPopup } = usePopupContext();
 
   const handleForeclose = async () => {
-    console.log(partialFlag);
     if (partialFlag) {
       window.alert(
         "To proceed with loan foreclosure, kindly make at least one repayment or clear all partial dues."
@@ -99,7 +98,6 @@ To proceed, please confirm by entering this exact amount in the next step, or ch
       setShowPopup(true);
       setType(data.status);
       setMessage(data.message);
-      console.log(data);
     } catch (error) {
       console.error("Error:", error.message);
       setShowPopup(true);
