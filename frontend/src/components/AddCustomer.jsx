@@ -173,9 +173,28 @@ const AddCustomer = () => {
             <label className="block mb-1">Phone Number</label>
             <input
               type="tel"
-              {...register("phone", { required: "Phone is required" })}
+              inputMode="numeric"
+              maxLength={10}
+              {...register("phone", {
+                required: "Phone number is required",
+                pattern: {
+                  value: /^\d{10}$/,
+                  message: "Phone number must be exactly 10 digits",
+                },
+              })}
+              onInput={(e) => {
+                e.target.value = e.target.value
+                  .replace(/[^0-9]/g, "")
+                  .slice(0, 10);
+              }}
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
+
+            {/* <input
+              type="tel"
+              {...register("phone", { required: "Phone is required" })}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            /> */}
             {errors.phone && (
               <p className="text-red-400 text-sm">{errors.phone.message}</p>
             )}
@@ -301,11 +320,30 @@ const AddCustomer = () => {
             <label className="block mb-1">Phone Number</label>
             <input
               type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              {...register("guarantor.phone", {
+                required: "Phone number is required",
+                pattern: {
+                  value: /^\d{10}$/,
+                  message: "Phone number must be exactly 10 digits",
+                },
+              })}
+              onInput={(e) => {
+                e.target.value = e.target.value
+                  .replace(/[^0-9]/g, "")
+                  .slice(0, 10);
+              }}
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+
+            {/* <input
+              type="tel"
               {...register("guarantor.phone", {
                 required: "Phone is required",
               })}
               className="w-full p-2 rounded bg-gray-700 text-white"
-            />
+            /> */}
             {errors?.guarantor?.phone && (
               <p className="text-red-400 text-sm">
                 {errors.guarantor.phone.message}
