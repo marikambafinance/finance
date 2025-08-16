@@ -52,7 +52,9 @@ const Dashboard = () => {
           />
           <StatCard
             label="Amount Disbursed"
-            value={`₹${totals?.actualAmountIssued?.toLocaleString("en-IN") || 0}`}
+            value={`₹${
+              totals?.actualAmountIssued?.toLocaleString("en-IN") || 0
+            }`}
           />
           <StatCard
             label="Amount Received"
@@ -60,12 +62,20 @@ const Dashboard = () => {
           />
           <StatCard
             label="Interest Amount Collected"
-            value={`₹${totals?.interestCollected?.toLocaleString("en-IN") || 0}`}
+            value={`₹${
+              totals?.interestCollected?.toLocaleString("en-IN") || 0
+            }`}
           />
           <StatCard label="Total Loans" value={totals?.loans || 0} />
           <StatCard label="Closed Loans" value={totals?.closedLoans || 0} />
-          <StatCard label="Penalty Collected" value={totals?.penaltyAmount || 0} />
-          <StatCard label="Penalty Balance" value={totals?.penaltyBalance || 0} />
+          <StatCard
+            label="Penalty Collected"
+            value={totals?.penaltyAmount || 0}
+          />
+          <StatCard
+            label="Penalty Balance"
+            value={totals?.penaltyBalance || 0}
+          />
           <StatCard
             onClick={() => setShow(true)}
             label="Total Customers"
@@ -106,9 +116,11 @@ const Dashboard = () => {
           Defaulters
         </h3>
 
-        {defaulters?.loans.map((loan, index) => (
-          <DefaultersLoanCard key={index} loan={loan} />
-        ))}
+        <div className="w-full max-h-[400px] overflow-y-auto space-y-4 pr-2 scrollbar-hide">
+          {defaulters?.loans.map((loan, index) => (
+            <DefaultersLoanCard key={index} loan={loan} />
+          ))}
+        </div>
       </div>
     )
   );
