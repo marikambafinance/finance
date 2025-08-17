@@ -1516,14 +1516,14 @@ def is_not_greater_than_one_month(start_date, end_date):
     return True
     
 
-def calculate_penalty(start_date, end_date, monthly_penalty=300):
+def calculate_penalty(start_date, end_date, monthly_penalty=300,grace_days=3):
     if end_date < start_date:
         return 0, 0  # consistent tuple return
 
     delta = end_date - start_date
 
-    # No penalty if overdue by 5 or fewer days
-    if delta.days <= 5:
+    # No penalty if overdue by 4 or fewer days
+    if delta.days <= grace_days:
         return 0, 0
 
     diff = relativedelta(end_date, start_date)
@@ -1650,7 +1650,6 @@ def calculate_monthly_penalty():
         return jsonify({"status": "Processing", "message": "Penalty update started in background."}), 202
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 
 
