@@ -537,7 +537,7 @@ def close_loan_if_fully_paid(loan_id, installment_number):
 
 @app.before_request
 def global_auth_check():
-    exempt_routes = ['home']
+    exempt_routes = ['home','dashboard_stats']
     if request.endpoint in exempt_routes:
         return
     if request.method == "OPTIONS":
@@ -1089,9 +1089,10 @@ def dashboard_stats():
                             {
                                 "$group": {
                                     "_id": None,
-                                    "recoveryAgentAmount": { "$sum": "$recoveryAgentAmount" }
-                                }
-                            }
+                                    "totalRecoveryAgentAmount": {
+                            "$sum": { "$toDouble": "$recoveryAgentAmount" }
+                                
+                            } }}
                         ]
                     }
                 }
@@ -1109,7 +1110,8 @@ def dashboard_stats():
         active_total_data = active_total_list[0] if active_total_list else {}
 
         # Extract fields
-        recovery_agent_amount = overall_data.get("recoveryAgentAmount", 0)
+        recovery_agent_amount = overall_data.get("totalRecoveryAgentAmount", 0)
+        print(recovery_agent_amount)
         paid_count_active_loans = active_paid_data.get("paidCount", 0)
         total_active_repayment_count = active_total_data.get("totalActiveRepayments", 0)
 
