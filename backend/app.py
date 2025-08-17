@@ -1084,6 +1084,14 @@ def dashboard_stats():
                             {
                                 "$count": "totalActiveRepayments"
                             }
+                        ],
+                        "overall": [
+                            {
+                                "$group": {
+                                    "_id": None,
+                                    "recoveryAgentAmount": { "$sum": "$recoveryAgentAmount" }
+                                }
+                            }
                         ]
                     }
                 }
@@ -1208,7 +1216,7 @@ def dashboard_stats():
                 "amountIssued": round(total_amount_issued, 2) - round(float(total_agreement_amount or 0),2),
                 "amountReceived": round(float(total_amount_paid or 0), 2),
                 "interestCollected": round(float(total_interest_collected or 0), 2),
-                "penaltyAmount": round(float(total_penalty_paid or 0), 2) - round(float(recovery_agent_amount),2),
+                "penaltyAmount": round(float(total_penalty_paid or 0), 2),
                 "penaltyBalance":round(float(penalty_balance or 0),2),
                 "agreementFees":round(float(total_agreement_amount or 0),2),
                 "netProfit": round(float(total_agreement_amount or 0),2)+ round(float(total_interest_collected or 0), 2) + round(float(total_penalty_paid or 0), 2) - round(float(recovery_agent_amount),2),
