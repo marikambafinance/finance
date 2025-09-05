@@ -1625,7 +1625,7 @@ def apply_monthly_penalties_new():
                 #previousDues = float(repayment.get("previousDues",0))
                 penalty,months = calculate_penalty(due_date,current_date)
                 already_months = repayment.get("totalPenaltyMonths", 0)
-                if months > alredy_months:
+                if months > already_months:
                     bulk_updates.append(
                         {
                             "filter": {"_id": repayment_id},
@@ -1675,4 +1675,5 @@ def home():
 if __name__ == '__main__':
 
     app.run()
+
 
