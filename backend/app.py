@@ -1596,7 +1596,7 @@ def update_total_penalties():
 
 def apply_monthly_penalties_new(): 
     PENALTY_PER_MONTH = 300
-    GRACE_PERIOD_DAYS = 5
+    GRACE_PERIOD_DAYS = 3
     try:
         remainder_collection = db.repayments
         current_date = datetime.now(ZoneInfo("Asia/Kolkata"))
@@ -1670,4 +1670,5 @@ def home():
     return jsonify({"message": "API is running"})
 
 if __name__ == '__main__':
+
     app.run()
