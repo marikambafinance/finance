@@ -1614,15 +1614,18 @@ def apply_monthly_penalties_new():
                 due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
                 due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
                 updatedOn = repayment.get("updatedOn",None)
-        
+                """
                 if updatedOn:
                     updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
             
                 if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
                     pass
                 else:
-                    #previousDues = float(repayment.get("previousDues",0))
-                    penalty,months = calculate_penalty(due_date,current_date)
+                """
+                #previousDues = float(repayment.get("previousDues",0))
+                penalty,months = calculate_penalty(due_date,current_date)
+                already_months = repayment.get("totalPenaltyMonths", 0)
+                if months > alredy_months:
                     bulk_updates.append(
                         {
                             "filter": {"_id": repayment_id},
@@ -1672,3 +1675,4 @@ def home():
 if __name__ == '__main__':
 
     app.run()
+
