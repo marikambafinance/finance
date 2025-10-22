@@ -1185,14 +1185,41 @@ def dashboard_stats():
         active_customers = len(db.loans.distinct("hpNumber", {"status": "active"}))
 
         # Defaulters
-        defaulters = list(db.repayments.aggregate([
-            {"$match": {"dueDate": {"$lt": today}, "status": {"$ne": "paid"}}},
-            {
-                "$group": {
-                    "_id": "$loanId",
-                    "overdueAmount": {"$sum": {"$toDouble": "$totalAmountDue"}},
-                    "hpNumber": {"$first": "$hpNumber"}
-                }
+        defaulters = list(db.loans.aggregate([
+          # 1️ Step 1: Only active loans
+          {
+              "$match": {
+                  "status": "active"
+              }
+          },
+          # 2️ Step 2: Join repayments for each active loan
+          {
+              "$lookup": {
+                  "from": "repayments",
+                  "localField": "_id",
+                  "foreignField": "loanId",
+                  "as": "repayments"
+              }
+          },
+          # 3️ Step 3: Break out repayment array
+          {
+              "$unwind": "$repayments"
+          },
+          # 4️ Step 4: Filter overdue repayments (dueDate < today, not paid)
+          {
+              "$match": {
+                  "repayments.dueDate": {"$lt": today},
+                  "repayments.status": {"$ne": "paid"}
+              }
+          },
+          # 5️ Step 5: Group to compute total overdue amount per loan
+          {
+              "$group": {
+                  "_id": "$_id",
+                  "hpNumber": {"$first": "$repayments.hpNumber"},
+                  "overdueAmount": {"$sum": {"$toDouble": "$repayments.totalAmountDue"}},
+                  "loanStatus": {"$first": "$status"}
+              }
             }
         ]))
         defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
@@ -1675,5 +1702,6 @@ def home():
 if __name__ == '__main__':
 
     app.run()
+
 
 
