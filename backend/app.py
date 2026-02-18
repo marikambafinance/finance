@@ -332,7 +332,7 @@ def get_cust_loans_info(hpNumber):
             loan["latePaymentCount"] = 0
             loan["monthsPaid"] = 0
     customer_details["loans"] = loans        
-    return customer_details
+    return list(customer_details)
 
 def insert_loan_data(loan_data):
     #print(loan_data)
