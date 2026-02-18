@@ -794,7 +794,6 @@ def update_repayment():
                     "paymentMode": payment_mode,
                     "amountPaid": delta_amount,   # ✅ ONLY DELTA
                     "paymentDate": payment_date,
-                    "installmentNumber": installment_number,
                     "createdOn": datetime.now(ZoneInfo("Asia/Kolkata"))
                 })
 
