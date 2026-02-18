@@ -892,21 +892,35 @@ def update_repayment():
         loan = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"totalPayWithPenalty":1,"_id":0})
 
                 
-        amount_to_update = (
-                new_amount_paid
-                if status != "partially_paid"
-                else new_amount_paid - float(amount_paid["amountPaid"])
-            )
-        if amount_to_update >0:              
-            update_ledger = db.ledger.insert_one({
-                "hpNumber":loan["hpNumber"],
-                "loanId":loan_id,
-                "paymentId":payment_id,
-                "paymentMode":payment_mode,
-                "amountPaid":new_amount_paid if status!="partial" else new_amount_paid-float(amount_paid["amountPaid"]),
-                "paymentDate":payment_date,
-                "createdOn":datetime.now()
+        old_amount_paid_doc = db.repayments.find_one(
+                    {"loanId": loan_id, "installmentNumber": installment_number},
+                    {"amountPaid": 1, "_id": 0}
+                    )
+
+        old_amount_paid = float(old_amount_paid_doc.get("amountPaid", 0))
+
+        # calculate delta correctly
+        delta_amount = round(new_amount_paid - old_amount_paid, 2)
+
+        if delta_amount > 0:
+
+            # prevent duplicate ledger entries (idempotent safety)
+            existing_entry = db.ledger.find_one({
+                "loanId": loan_id,
+                "paymentId": payment_id
             })
+
+            if not existing_entry:
+                db.ledger.insert_one({
+                    "hpNumber": loan["hpNumber"],
+                    "loanId": loan_id,
+                    "installmentNumber": installment_number,
+                    "paymentId": payment_id,
+                    "paymentMode": payment_mode,
+                    "amountPaid": delta_amount,   # ✅ ONLY DELTA
+                    "paymentDate": payment_date,
+                    "createdOn": datetime.now(ZoneInfo("Asia/Kolkata"))
+                })
 
         loan_res = db.repayments.aggregate(           [
                     { "$match": { "loanId": loan_id } },
@@ -1345,6 +1359,24 @@ def auto_update():
                 new_status = "partial"
                 used_amount = remaining
 
+            if used_amount > 0:
+                existing_ledger = db.ledger.find_one({
+                    "loanId": loan_id,
+                    "paymentId": payment_id
+                })
+
+                if not existing_ledger:
+                    db.ledger.insert_one({
+                        "hpNumber": loan["hpNumber"],
+                        "loanId": loan_id,
+                        "installmentNumber": r.get("installmentNumber"),
+                        "paymentId": payment_id,
+                        "paymentMode": payment_mode,
+                        "amountPaid": used_amount,   # ✅ ONLY DELTA
+                        "paymentDate": current_date,
+                        "createdOn": current_date
+                    })
+
             update_doc = {
                 "amountPaid": str(new_paid),
                 "status": new_status,
@@ -1379,15 +1411,6 @@ def auto_update():
             }
         )
 
-        db.ledger.insert_one({
-        "hpNumber": loan["hpNumber"],
-        "loanId": loan_id,
-        "paymentId": payment_id,
-        "paymentMode": payment_mode,
-        "amountPaid": payment_amount,
-        "paymentDate": current_date,
-        "createdOn": current_date
-         })
         # Step 6: Return summary
         return {
             "status":"success",
@@ -1441,15 +1464,22 @@ def foreclose():
                 }
             )
 
-            update_ledger = db.ledger.insert_one({
-                "hpNumber": customer_id,
+            existing_ledger = db.ledger.find_one({
                 "loanId": loan_id,
-                "paymentId": generate_unique_payment_id(),
-                "paymentMode": payment_mode,  # <-- Make sure this is a date, not a variable misused
-                "createdOn": datetime.now(),
-                "paymentDate": datetime.now(),
-                "amountPaid": round(pending_balance, 2)
-            })
+                "amountPaid": round(pending_balance, 2),
+                "paymentMode": payment_mode
+                 })
+
+            if not existing_ledger:
+                db.ledger.insert_one({
+                    "hpNumber": customer_id,
+                    "loanId": loan_id,
+                    "paymentId": generate_unique_payment_id(),
+                    "paymentMode": payment_mode,
+                    "createdOn": datetime.now(),
+                    "paymentDate": datetime.now(),
+                    "amountPaid": round(pending_balance, 2)
+                })
             if update.modified_count > 0:
                 return jsonify({"status": "success", "message": "DB updated successfully"}),200
             else:
@@ -1534,12 +1564,17 @@ def pay_penalty():
                      "penaltyBalance": penaltyBalance }
                 }
             )
+        payment_id = generate_unique_payment_id()
+
+        
         db.ledger.insert_one({
-            "hpNumber": hpNumber,"loanId" : loan_id,"paymentId": generate_unique_payment_id(),
+            "hpNumber": hpNumber,
+            "loanId": loan_id,
+            "paymentId": payment_id,
             "paymentMode": paymentMode,
             "paymentDate": datetime.now(),
             "createdOn": datetime.now(),
-            "amountPaid":paid_penalty,
+            "amountPaid": paid_due_paid  # ✅ ONLY DELTA
         })
         return jsonify({"status":"success","message":"Penalty updated !"}),200
     except Exception as e:
