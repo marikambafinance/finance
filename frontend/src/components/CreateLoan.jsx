@@ -39,7 +39,7 @@ const CreateLoanPage = () => {
   const hpEntry = watch("hpEntry");
   const hpCancellation = watch("hpCancellation");
   const insurance = watch("insurance");
-  const agentCommision = watch("agentCommision");
+  const eStamp = watch("eStamp");
   const to = watch("to");
   // const officeRent = watch("officeRent");
   // const officeManagementSalary = watch("officeManagementSalary");
@@ -108,7 +108,7 @@ const CreateLoanPage = () => {
         parseFloat(hpCancellation || 0) +
         parseFloat(insurance || 0) +
         parseFloat(to || 0) +
-        parseFloat(agentCommision || 0))
+        parseFloat(eStamp || 0))
     )
       // parseFloat(officeRent || 0) +
       // parseFloat(officeManagementSalary || 0) +
@@ -125,7 +125,7 @@ const CreateLoanPage = () => {
     hpCancellation,
     insurance,
     to,
-    agentCommision,
+    eStamp,
     // officeRent,
     // officeManagementSalary,
     // officeOtherExpense,
@@ -308,12 +308,12 @@ const CreateLoanPage = () => {
             />
           </div>
           <div>
-            <label className="block mb-1">Agent Commision</label>
+            <label className="block mb-1">E-Stamp</label>
             <input
-              placeholder="Agent Commision"
+              placeholder="E-Stamp"
               type="number"
               onWheel={(e) => e.target.blur()}
-              {...register("agentCommision")}
+              {...register("eStamp")}
               className="p-2 rounded bg-gray-700 w-full"
             />
           </div>
