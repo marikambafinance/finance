@@ -317,146 +317,22 @@ def total_loan_payable(hpNumber):
 
 
 def get_cust_loans_info(hpNumber):
-    pipeline = [
-        {"$match": {"hpNumber": hpNumber}},
-
-        # Lookup loans
-        {
-            "$lookup": {
-                "from": "loans",
-                "localField": "hpNumber",
-                "foreignField": "hpNumber",
-                "as": "loans"
-            }
-        },
-
-        # Lookup repayments and calculate stats
-        {
-            "$lookup": {
-                "from": "repayments",
-                "pipeline": [
-                    {
-                        "$group": {
-                            "_id": "$loanId",
-                            "totalPaid": {
-                                "$sum": {
-                                    "$cond": [
-                                        {"$eq": ["$status", "paid"]},
-                                        {"$toDouble": "$amountPaid"},
-                                        0
-                                    ]
-                                }
-                            },
-                            # monthsPaid = number of repayments with status = paid
-                            "monthsPaid": {
-                                "$sum": {"$cond": [{"$eq": ["$status", "paid"]}, 1, 0]}
-                            },
-                            "latePaymentCount": {
-                                "$sum": {
-                                    "$cond": [
-                                        {
-                                            "$and": [
-                                                {"$eq": ["$status", "paid"]},
-                                                {"$gt": ["$paymentDate", "$dueDate"]}
-                                            ]
-                                        },
-                                        1,
-                                        0
-                                    ]
-                                }
-                            },
-                            # missedCount = pending + overdue
-                            "missedCount": {
-                                "$sum": {
-                                    "$cond": [
-                                        {
-                                            "$and": [
-                                                {"$eq": ["$status", "pending"]},
-                                                {"$lt": ["$dueDate", "$$NOW"]}
-                                            ]
-                                        },
-                                        1,
-                                        0
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                ],
-                "as": "repayment_totals"
-            }
-        },
-
-        # Merge repayment stats into each loan
-        {
-            "$addFields": {
-                "loans": {
-                    "$map": {
-                        "input": "$loans",
-                        "as": "loan",
-                        "in": {
-                            "$mergeObjects": [
-                                "$$loan",
-                                {
-                                    "$ifNull": [
-                                        {
-                                            "$let": {
-                                                "vars": {
-                                                    "match": {
-                                                        "$first": {
-                                                            "$filter": {
-                                                                "input": "$repayment_totals",
-                                                                "as": "r",
-                                                                "cond": {
-                                                                    "$eq": ["$$r._id", "$$loan.loanId"]
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                "in": {
-                                                    "totalPaid": "$$match.totalPaid",
-                                                    "monthsPaid": "$$match.monthsPaid",
-                                                    "latePaymentCount": "$$match.latePaymentCount",
-                                                    "missedCount": "$$match.missedCount"
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "totalPaid": 0,
-                                            "monthsPaid": 0,
-                                            "latePaymentCount": 0,
-                                            "missedCount": 0
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-
-        {"$project": {"repayment_totals": 0}}
-    ]
-
-    result = list(db.customers.aggregate(pipeline))
-
-    def serialize_object_ids(data):
-        if isinstance(data, list):
-            return [serialize_object_ids(doc) for doc in data]
-        elif isinstance(data, dict):
-            for key in list(data.keys()):
-                if isinstance(data[key], ObjectId):
-                    data[key] = str(data[key])
-                elif isinstance(data[key], (dict, list)):
-                    data[key] = serialize_object_ids(data[key])
-            return data
-        return data
-
-    return serialize_object_ids(result)
-
-
+    customer_details = db.customers.find_one({"hpNumber": hpNumber}, {"_id": 0})
+    loans = list(db.loans.find({"hpNumber": hpNumber}, {"_id": 0}))
+    for loan in loans:
+        if loan["status"]!="foreclosed":
+            missed_count = db.repayments.count_documents({"loanId": loan["loanId"], "status": {"$ne": "paid"}, "dueDate": {"$lt": datetime.now()}})
+            late_payment_count = db.repayments.count_documents({"loanId": loan["loanId"], "status": "paid", "paymentDate": {"$gt": "$dueDate"}})
+            months_paid = db.repayments.count_documents({"loanId": loan["loanId"], "status": "paid"})
+            loan["missedCount"] = missed_count
+            loan["latePaymentCount"] = late_payment_count
+            loan["monthsPaid"] = months_paid
+        elif loan["status"]=="foreclosed":
+            loan["missedCount"] = 0
+            loan["latePaymentCount"] = 0
+            loan["monthsPaid"] = 0
+    customer_details["loans"] = loans        
+    return customer_details
 
 def insert_loan_data(loan_data):
     #print(loan_data)
