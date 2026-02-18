@@ -1622,65 +1622,108 @@ def update_total_penalties():
         print("failed")
 
 
-def apply_monthly_penalties_new(): 
+def apply_monthly_penalties_new():
     PENALTY_PER_MONTH = 300
     GRACE_PERIOD_DAYS = 3
+
     try:
-        remainder_collection = db.repayments
+        repayments_col = db.repayments
+        loans_col = db.loans
+
         current_date = datetime.now(ZoneInfo("Asia/Kolkata"))
-        active_loans_cursor = db.loans.find({"status":{"$eq":"active"}},{"loanId":1,"_id":0})
-        active_loan_ids = [doc["loanId"] for doc in active_loans_cursor]
-        overdue_repayments = remainder_collection.find({
-            "status": {"$ne": "paid"},
-            "dueDate": {"$lt": current_date} # Initial filter: due date is in the past
+
+        # Get active loan IDs
+        active_loans_cursor = loans_col.find(
+            {"status": "active"},
+            {"loanId": 1, "_id": 0}
+        )
+        active_loan_ids = {doc["loanId"] for doc in active_loans_cursor}
+
+        # Fetch ALL unpaid repayments (important for correction)
+        active_repayments = repayments_col.find({
+            "status": {"$ne": "paid"}
         })
 
         bulk_updates = []
-        for repayment in overdue_repayments:
-            repayment_id = repayment['_id']
-            if repayment["loanId"] in active_loan_ids:
-                due_date = repayment['dueDate'] # Assuming this is a datetime object from MongoDB
-                due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-                updatedOn = repayment.get("updatedOn",None)
-                """
-                if updatedOn:
-                    updatedOn = updatedOn.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-            
-                if updatedOn and is_not_greater_than_one_month(updatedOn,current_date) :
-                    pass
-                else:
-                """
-                #previousDues = float(repayment.get("previousDues",0))
-                penalty,months = calculate_penalty(due_date,current_date)
-                already_months = repayment.get("totalPenaltyMonths", 0)
-                if months > already_months:
+
+        for repayment in active_repayments:
+            repayment_id = repayment["_id"]
+            loan_id = repayment.get("loanId")
+
+            # Skip non-active loans
+            if loan_id not in active_loan_ids:
+                continue
+
+            due_date = repayment.get("dueDate")
+            if not due_date:
+                continue
+
+            due_date = due_date.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+
+            existing_penalty = float(repayment.get("penalty", 0))
+            existing_months = int(repayment.get("totalPenaltyMonths", 0))
+
+            # ----------------------------
+            # 🟥 CASE 1: WRONG PENALTY ENTERED (current_date < dueDate)
+            # ----------------------------
+            if current_date < due_date:
+                if existing_penalty != 0 or existing_months != 0:
                     bulk_updates.append(
-                        {
-                            "filter": {"_id": repayment_id},
-                            "update": {
+                        pymongo.UpdateOne(
+                            {"_id": repayment_id},
+                            {
                                 "$set": {
-                                    "updatedOn": current_date, # Set last update time
-                                    "totalPenaltyMonths": months,
-                                    "penalty": penalty,
-                                    },
+                                    "penalty": 0,
+                                    "totalPenaltyMonths": 0,
+                                    "updatedOn": current_date,
+                                    "penaltyAutoCorrected": True
+                                }
+                            }
+                        )
+                    )
+                continue
+
+            # ----------------------------
+            # 🟩 CASE 2: VALID OVERDUE – CALCULATE PENALTY
+            # ----------------------------
+            penalty, months = calculate_penalty(
+                due_date,
+                current_date,
+                monthly_penalty=PENALTY_PER_MONTH,
+                grace_days=GRACE_PERIOD_DAYS
+            )
+
+            # Update only if penalty increased
+            if months > existing_months:
+                bulk_updates.append(
+                    pymongo.UpdateOne(
+                        {"_id": repayment_id},
+                        {
+                            "$set": {
+                                "penalty": penalty,
+                                "totalPenaltyMonths": months,
+                                "updatedOn": current_date
                             }
                         }
                     )
-        if bulk_updates:
-        # Execute bulk updates
-            req = []
-            for item in bulk_updates:
-                req.append(
-                    pymongo.UpdateOne(item["filter"], item["update"])
                 )
-            result = remainder_collection.bulk_write(req)
-            update_total_penalties()
-            print(f"status:Success,message:Penalties updated for {result.modified_count}")
-        else:
-            print("status: Success,message:No records to update")
-    except Exception as e:
-        print(f"status:error,message:{str(e)}")
 
+        # ----------------------------
+        # 🔁 EXECUTE BULK UPDATE
+        # ----------------------------
+        if bulk_updates:
+            result = repayments_col.bulk_write(bulk_updates)
+            update_total_penalties()
+            print(
+                f"status:Success | Penalties processed | Updated: {result.modified_count}"
+            )
+        else:
+            # Still recalc totals to self-heal loan level data
+            update_total_penalties()
+            print("status:Success | No penalty changes required")
+
+    except Exception as e:
+        print(f"status:Error | message: {str(e)}")
 
 @app.route("/update_penalty_new", methods=['GET',"OPTIONS"])
 def calculate_monthly_penalty():
