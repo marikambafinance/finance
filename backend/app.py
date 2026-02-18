@@ -10,7 +10,7 @@ import os
 import json
 from bson import ObjectId
 from zoneinfo import ZoneInfo
-from twilio.rest import Client
+#from twilio.rest import Client
 import time
 import pymongo
 import hashlib
@@ -941,7 +941,7 @@ def update_repayment():
 ])
 
         data = next(loan_res, None)
-        total_payable = round(data["totalPayable"], 2)
+        total_payable = round(float(data["totalPayable"]), 2)
         total_paid = round(data["totalPaid"], 2)
         total_amount_due = total_payable-total_paid
         total_penalty = round(float(data["totalPenaltySum"]),2)
@@ -1599,7 +1599,8 @@ def update_total_penalties():
             penalty_paid = float(loan.get("penaltyPaid", 0))
             total_penalty = float(doc["totalPenaltySum"])
             penalty_balance = total_penalty - penalty_paid
-            PayWithPenalty = float(loan.get("totalPayWithPenalty",0)) + total_penalty
+            total_payable = float(loan.get("totalPayable", 0))
+            PayWithPenalty = total_payable + total_penalty
             #print(total_penalty,penalty_balance,PayWithPenalty)
             bulk_updates.append(
                 UpdateOne(
