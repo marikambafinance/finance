@@ -1185,44 +1185,50 @@ def dashboard_stats():
         active_customers = len(db.loans.distinct("hpNumber", {"status": "active"}))
 
         # Defaulters
+        today = datetime.now(ZoneInfo("Asia/Kolkata"))
+
         defaulters = list(db.loans.aggregate([
-          # 1️ Step 1: Only active loans
-          {
-              "$match": {
-                  "status": "active"
-              }
-          },
-          # 2️ Step 2: Join repayments for each active loan
-          {
-              "$lookup": {
-                  "from": "repayments",
-                  "localField": "_id",
-                  "foreignField": "loanId",
-                  "as": "repayments"
-              }
-          },
-          # 3️ Step 3: Break out repayment array
-          {
-              "$unwind": "$repayments"
-          },
-          # 4️ Step 4: Filter overdue repayments (dueDate < today, not paid)
-          {
-              "$match": {
-                  "repayments.dueDate": {"$lt": today},
-                  "repayments.status": {"$ne": "paid"}
-              }
-          },
-          # 5️ Step 5: Group to compute total overdue amount per loan
-          {
-              "$group": {
-                  "_id": "$_id",
-                  "hpNumber": {"$first": "$repayments.hpNumber"},
-                  "overdueAmount": {"$sum": {"$toDouble": "$repayments.totalAmountDue"}},
-                  "loanStatus": {"$first": "$status"}
-              }
+            # 1️⃣ Only active loans
+            {
+                "$match": {
+                    "status": "active"
+                }
+            },
+
+            # 2️⃣ Join repayments using STRING loanId
+            {
+                "$lookup": {
+                    "from": "repayments",
+                    "localField": "loanId",   # ✅ STRING
+                    "foreignField": "loanId",
+                    "as": "repayments"
+                }
+            },
+
+            # 3️⃣ Break out repayments
+            { "$unwind": "$repayments" },
+
+            # 4️⃣ Filter overdue unpaid EMIs
+            {
+                "$match": {
+                    "repayments.status": { "$ne": "paid" },
+                    "repayments.dueDate": { "$lt": today }
+                }
+            },
+
+            # 5️⃣ Group per loan
+            {
+                "$group": {
+                    "_id": "$loanId",
+                    "hpNumber": { "$first": "$hpNumber" },   # ✅ from loans
+                    "overdueAmount": {
+                        "$sum": { "$toDouble": "$repayments.totalAmountDue" }
+                    }
+                }
             }
         ]))
-        defaulter_customers = {d["hpNumber"] for d in defaulters if "hpNumber" in d}
+
+        defaulter_customers = {d["hpNumber"] for d in defaulters}
         total_overdue = round(sum(d["overdueAmount"] for d in defaulters), 2)
         repayment_rate = round((paid_count_active_loans / total_active_repayment_count) * 100, 2) if total_active_repayment_count else 100
 
