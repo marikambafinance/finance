@@ -873,6 +873,12 @@ def update_repayment():
         if (round(new_amount_paid,2)>=round(total_amount_due,2)or (round(new_amount_paid,2)-round(total_amount_due,2)==0)):
             status="paid"
     try:
+        old_amount_paid_doc = db.repayments.find_one(
+            {"loanId": loan_id, "installmentNumber": installment_number},
+            {"amountPaid": 1, "_id": 0}
+        )
+
+        old_amount_paid = float(old_amount_paid_doc.get("amountPaid", 0))
         
         result = db.repayments.update_one(
             {"loanId": loan_id, "installmentNumber": installment_number},
@@ -891,13 +897,6 @@ def update_repayment():
         )
         loan = db.loans.find_one({"loanId":loan_id},{"hpNumber":1,"totalPayWithPenalty":1,"_id":0})
 
-                
-        old_amount_paid_doc = db.repayments.find_one(
-                    {"loanId": loan_id, "installmentNumber": installment_number},
-                    {"amountPaid": 1, "_id": 0}
-                    )
-
-        old_amount_paid = float(old_amount_paid_doc.get("amountPaid", 0))
 
         # calculate delta correctly
         delta_amount = round(new_amount_paid - old_amount_paid, 2)
@@ -961,6 +960,8 @@ def update_repayment():
         total_penalty = round(float(data["totalPenaltySum"]),2)
         penalty_balance = total_penalty - penalty_paid
         total_Pay_With_Penalty = total_payable + total_penalty
+
+       
 
         update_result = db.loans.update_one(
             {"loanId": loan_id},
